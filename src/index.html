@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Browse items, blocks, and traders from any Empyrion - Galactic Survival scenario. Everything runs in your browser — no installation, no uploads." />
+    <title>Empyrion Codex</title>
+    <link rel="stylesheet" href="dist/output.css" />
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+  </head>
+  <body class="h-screen overflow-hidden bg-[#0f1115] text-slate-200 flex">
+
+    <!-- ── Sidebar backdrop (mobile only) ── -->
+    <div id="sidebar-backdrop" class="fixed inset-0 z-40 bg-black/50 hidden" aria-hidden="true"></div>
+
+    <!-- ── Sidebar ── -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 -translate-x-full min-[1000px]:translate-x-0 min-[1000px]:relative min-[1000px]:z-auto transition-transform duration-300 w-64 shrink-0 bg-[#0a0c10] border-r border-slate-800/50 flex flex-col p-4">
+
+      <!-- Mobile close button -->
+      <button id="sidebar-close" class="min-[1000px]:hidden self-end mb-4 text-slate-500 hover:text-slate-200 w-8 h-8 flex items-center justify-center rounded hover:bg-slate-800 transition-colors" aria-label="Close menu">
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      <!-- Logo -->
+      <div id="logo-home-btn" class="flex items-center gap-3 px-2 mb-10 cursor-pointer" role="button" tabindex="0" title="Go to home">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-white shadow-lg shadow-blue-500/20" style="background:linear-gradient(135deg,#3b82f6,#6366f1)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0" aria-hidden="true">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <div class="leading-none select-none">
+          <p class="text-sm font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">EMPYRION</p>
+          <p class="text-[11px] font-bold tracking-tight text-slate-500 mt-0.5">CODEX</p>
+        </div>
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex-1 flex flex-col gap-2" aria-label="Main navigation">
+        <button class="sidebar-btn" data-section="items">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          All Items
+        </button>
+        <button class="sidebar-btn" data-section="trading">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+          </svg>
+          Trading
+        </button>
+        <button class="sidebar-btn" data-section="scenarios">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            <path d="M4.93 4.93a10 10 0 0 0 0 14.14"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M8.46 8.46a5 5 0 0 0 0 7.07"/>
+          </svg>
+          Scenarios
+        </button>
+        <button class="sidebar-btn" data-section="about">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          About
+        </button>
+        <button class="sidebar-btn" data-section="settings">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Settings
+        </button>
+      </nav>
+
+      <!-- Scenario footer -->
+      <div class="mt-auto px-2 py-3">
+        <span id="scenario-name" class="hidden text-sm font-bold text-orange-400 truncate block mb-0.5"></span>
+      </div>
+
+    </aside>
+
+    <!-- ── Content ── -->
+    <main class="flex-1 overflow-hidden flex flex-col bg-[#0f1115]">
+
+      <!-- ── Mobile top bar ── -->
+      <div class="min-[1000px]:hidden shrink-0 h-12 flex items-center gap-3 px-4 border-b border-slate-800/50 bg-[#0a0c10] z-30">
+        <button id="sidebar-toggle" class="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+          <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="flex items-center gap-2 select-none">
+          <div class="w-6 h-6 rounded flex items-center justify-center shrink-0 text-white" style="background:linear-gradient(135deg,#3b82f6,#6366f1)">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="0" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <span class="text-sm font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">EMPYRION CODEX</span>
+        </div>
+      </div>
+
+      <!-- ── Items section ── -->
+      <section id="section-items" class="section-panel hidden flex-1 flex flex-col overflow-hidden relative">
+
+        <!-- Persistent search bar + vessel toggles -->
+        <header class="shrink-0 flex flex-wrap items-center gap-3 px-4 py-3 md:flex-nowrap md:justify-between md:h-20 md:py-0 md:px-8 md:gap-4 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <div class="relative w-full md:max-w-2xl group">
+            <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input id="items-search" type="text" placeholder="Search items, categories, or stats..."
+                   class="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3 pl-12 pr-4 text-sm text-slate-200 placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                   autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="flex items-center gap-2 md:gap-4 shrink-0">
+            <div class="hidden md:block h-8 w-px bg-slate-800"></div>
+            <div class="flex gap-1">
+              <button class="vessel-btn" data-vessel="BA">BA</button>
+              <button class="vessel-btn" data-vessel="HV">HV</button>
+              <button class="vessel-btn" data-vessel="SV">SV</button>
+              <button class="vessel-btn" data-vessel="CV">CV</button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Section heading + live stats + result count -->
+        <div class="shrink-0 flex items-end justify-between px-4 md:px-8 pt-4 md:pt-6 pb-2">
+          <div>
+            <h2 class="text-2xl font-bold text-white mb-1">All Items</h2>
+            <div class="stats-row hidden">
+              <span class="text-sm text-slate-500">Showing </span><span class="stat-count text-sm text-slate-400 font-medium"></span><span class="text-sm text-slate-500"> items from </span><span class="stat-file text-sm text-slate-400 font-mono"></span>
+            </div>
+          </div>
+          <span id="items-result-count" class="hidden text-sm text-slate-600 tabular-nums pb-0.5 select-none"></span>
+        </div>
+
+        <p class="error-msg text-xs text-red-400 hidden shrink-0 px-4 md:px-8 pb-2"></p>
+
+        <!-- Items grid + toolbar (toolbar sticky on md+, scrolls on mobile) -->
+        <div id="items-list-container" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+
+          <!-- Category pills + sort/filter row — populated dynamically, revealed on load -->
+          <div id="items-toolbar" class="hidden px-4 md:px-8 pt-3 pb-3 md:pb-4 md:sticky md:top-0 md:bg-[#0f1115] md:z-10 md:border-b md:border-slate-800/30">
+            <div id="category-pills" class="flex flex-wrap gap-2"></div>
+            <!-- Sort & price filter -->
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 pt-3 border-t border-slate-800/40">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] uppercase tracking-widest text-slate-600 select-none">Sort</span>
+                <div class="flex gap-1">
+                  <button class="sort-btn active" data-sort="id">ID</button>
+                  <button class="sort-btn" data-sort="name">Name</button>
+                  <button class="sort-btn" data-sort="price">Price</button>
+                </div>
+                <button id="sort-dir-btn" class="w-6 h-5 flex items-center justify-center text-[10px] text-slate-500 hover:text-slate-200 rounded border border-slate-800 hover:border-slate-700 transition-all select-none" title="Toggle sort direction">↑</button>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] uppercase tracking-widest text-slate-600 select-none">Min price</span>
+                <input id="min-price" type="number" min="0" step="1" placeholder="0"
+                  class="no-spinner w-24 bg-[#161920] border border-slate-800 rounded-md px-2.5 py-0.5 text-[11px] text-slate-300 placeholder-slate-600 outline-none focus:border-blue-500/50 transition-all" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Items grid -->
+          <div id="items-grid" class="px-4 md:px-8 pb-8">
+            <p class="text-xs text-slate-700 text-center py-20 italic select-none">No items loaded.</p>
+          </div>
+
+        </div>
+        <button id="items-scroll-top" class="scroll-top-btn" aria-label="Scroll to top" title="Back to top">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+      </section>
+
+      <!-- ── Scenarios section ── -->
+      <section id="section-scenarios" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
+        <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <h2 class="text-2xl font-bold text-white">Scenarios</h2>
+        </header>
+
+        <div id="scenarios-scroll" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col">
+
+          <!-- Hero import area -->
+          <div class="flex flex-col items-center justify-center gap-6 py-14 px-8 select-none shrink-0">
+
+            <!-- Icon + heading -->
+            <div class="flex flex-col items-center gap-3">
+              <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-500/10" style="background:linear-gradient(135deg,#f59e0b44,#78350f44);border:1px solid #f59e0b33">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-amber-500/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                </svg>
+              </div>
+              <p id="hero-load-status" class="text-sm tracking-widest uppercase text-zinc-400">No data loaded</p>
+            </div>
+
+            <!-- Primary: scenario import -->
+            <div class="flex flex-col items-center gap-2">
+              <label class="flex items-center gap-2 cursor-pointer bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 text-sm font-bold tracking-widest px-6 py-3 rounded-lg transition-colors shadow-lg shadow-amber-500/20" title="Select the root folder of an Empyrion scenario">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                IMPORT SCENARIO
+                <input id="scenario-input" type="file" class="sr-only" webkitdirectory />
+              </label>
+              <p class="text-[11px] text-zinc-400">Select the root folder of an Empyrion scenario — loads all config files at once</p>
+              <div class="mt-1 flex flex-col gap-1 text-[10px] text-zinc-500 text-center leading-relaxed">
+                <span>Vanilla scenarios are usually at <code class="font-mono text-zinc-300">…\Steam\steamapps\common\Empyrion - Galactic Survival\Content\Scenarios</code></span>
+                <span>Workshop scenarios are usually at <code class="font-mono text-zinc-300">…\Steam\steamapps\workshop\content\383120</code></span>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="flex items-center gap-4 w-96">
+              <div class="flex-1 h-px bg-zinc-800"></div>
+              <span class="text-[10px] text-zinc-500 uppercase tracking-widest">or load individual files</span>
+              <div class="flex-1 h-px bg-zinc-800"></div>
+            </div>
+
+            <!-- Individual file loaders -->
+            <div class="flex flex-wrap justify-center gap-3">
+              <label class="flex items-center gap-1.5 cursor-pointer border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-100 text-[11px] font-semibold tracking-wider px-3 py-2 rounded transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                ItemsConfig.ecf
+                <input type="file" class="file-input sr-only" accept=".ecf" data-nav="section-items" />
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-100 text-[11px] font-semibold tracking-wider px-3 py-2 rounded transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                BlocksConfig.ecf
+                <input type="file" class="file-input sr-only" accept=".ecf" data-nav="section-items" />
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-100 text-[11px] font-semibold tracking-wider px-3 py-2 rounded transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                TraderNPCConfig.ecf
+                <input type="file" class="file-input sr-only" accept=".ecf" data-nav="section-trading" />
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-100 text-[11px] font-semibold tracking-wider px-3 py-2 rounded transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Templates.ecf
+                <input id="templates-input" type="file" class="sr-only" accept=".ecf" />
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-100 text-[11px] font-semibold tracking-wider px-3 py-2 rounded transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Localization.csv
+                <input id="localization-input" type="file" class="sr-only" accept=".csv" />
+              </label>
+            </div>
+
+          </div>
+
+          <!-- Divider between hero and cards -->
+          <div class="shrink-0 h-px bg-zinc-800/60 mx-8"></div>
+
+          <!-- Cards -->
+          <div class="flex flex-col gap-4 px-8 py-8">
+
+          <!-- Import .empcdx -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-6 flex flex-col gap-4" style="border-left-color:#6366f1">
+            <div class="flex items-start gap-4">
+              <div class="shrink-0 mt-0.5 text-indigo-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <div class="flex-1">
+                <p class="text-[11px] font-semibold uppercase tracking-widest text-indigo-400/70 mb-1">Import Exported Data</p>
+                <p class="text-[13px] text-slate-400 leading-relaxed">Load a previously exported <code class="text-slate-300 bg-zinc-800/60 px-1 rounded text-[12px]">.empcdx</code> file. All data pages will be populated instantly, no ECF files required.</p>
+              </div>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer w-fit bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-900 text-slate-200 text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors border border-zinc-700 hover:border-zinc-600 ml-8">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Import .empcdx
+              <input id="empdb-input" type="file" class="sr-only" accept=".empcdx,.json" />
+            </label>
+          </div>
+
+          <!-- Export -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-6 flex flex-col gap-4" style="border-left-color:#3b82f6">
+            <div class="flex items-start gap-4">
+              <div class="shrink-0 mt-0.5 text-blue-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </div>
+              <div class="flex-1">
+                <p class="text-[11px] font-semibold uppercase tracking-widest text-blue-400/70 mb-1">Export Current Data</p>
+                <p class="text-[13px] text-slate-400 leading-relaxed">Packages all currently loaded data (items, blocks, traders, templates, localization) into a single <code class="text-slate-300 bg-zinc-800/60 px-1 rounded text-[12px]">.empcdx</code> file. Import it later without needing the original ECF files.</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 ml-8">
+              <button id="export-btn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-30 disabled:pointer-events-none text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export
+              </button>
+              <span id="export-status" class="text-[11px] text-slate-600">No data loaded</span>
+            </div>
+          </div>
+
+          <!-- Saved scenarios -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-6 flex flex-col gap-4" style="border-left-color:#10b981">
+            <div class="flex items-start gap-4">
+              <div class="shrink-0 mt-0.5 text-emerald-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v14a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              </div>
+              <div class="flex-1">
+                <p class="text-[11px] font-semibold uppercase tracking-widest text-emerald-400/70 mb-1">Saved Scenarios</p>
+                <p class="text-[13px] text-slate-400 leading-relaxed">Scenarios are cached automatically in your browser when you load a folder or import a <code class="text-slate-300 bg-zinc-800/60 px-1 rounded text-[12px]">.empcdx</code> file. Click <strong class="text-slate-300">Load</strong> to restore a saved scenario.</p>
+              </div>
+            </div>
+            <div id="saved-scenarios-list" class="text-xs text-zinc-600 italic ml-8">Loading…</div>
+          </div>
+
+          </div><!-- end cards -->
+        </div><!-- end scroll container -->
+      </section>
+
+      <!-- ── Trading section ── -->
+      <section id="section-trading" class="section-panel hidden flex-1 flex flex-col overflow-hidden relative">
+
+        <!-- Persistent search bar + filters + view toggle -->
+        <header class="shrink-0 flex flex-col gap-3 px-4 md:px-8 py-4 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <!-- Row 1: search -->
+          <div class="relative w-full group">
+            <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input id="trading-search" type="text" placeholder="Search traders or items..."
+                   class="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3 pl-12 pr-4 text-sm text-slate-200 placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                   autocomplete="off" spellcheck="false" />
+          </div>
+          <!-- Row 2: filters — two logical groups, stack on mobile / inline on sm+ -->
+          <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 gap-2">
+            <!-- Group 1: price filters + show toggle -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <span class="text-xs uppercase tracking-widest text-slate-600 select-none">NPC Sell&#x2264;</span>
+                <input id="trading-npc-sell-max" type="number" min="0" step="1" placeholder="any"
+                  class="no-spinner w-20 bg-[#161920] border border-slate-800 rounded-md px-2.5 py-0.5 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-blue-500/50 transition-all" />
+              </div>
+              <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs uppercase tracking-widest text-slate-600 select-none">NPC Buy&#x2265;</span>
+                <input id="trading-npc-buy-min" type="number" min="0" step="1" placeholder="any"
+                  class="no-spinner w-20 bg-[#161920] border border-slate-800 rounded-md px-2.5 py-0.5 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-blue-500/50 transition-all" />
+              </div>
+              <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
+              <div class="flex gap-1">
+                <button class="view-tab-btn active" data-trading-show="all">All</button>
+                <button class="view-tab-btn" data-trading-show="sells">Sells</button>
+                <button class="view-tab-btn" data-trading-show="buys">Buys</button>
+              </div>
+            </div>
+            <!-- Separator: vertical on sm+, horizontal on mobile -->
+            <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
+            <div class="sm:hidden h-px bg-slate-800/60"></div>
+            <!-- Group 2: sort + view toggle -->
+            <div class="flex items-center gap-3 flex-wrap">
+              <div class="flex items-center gap-2">
+                <span class="text-xs uppercase tracking-widest text-slate-600 select-none">Sort</span>
+                <select id="trading-sort" class="bg-[#161920] border border-slate-800 rounded-md px-2 py-0.5 text-xs text-slate-300 outline-none focus:border-blue-500/50 transition-all cursor-pointer">
+                  <option value="default">Default</option>
+                  <option value="max-credit">Max buy value</option>
+                  <option value="max-sell-price">Max sell price</option>
+                  <option value="max-qty">Max quantity</option>
+                </select>
+              </div>
+              <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
+              <div class="flex gap-1">
+                <button class="view-tab-btn active" data-trading-view="traders">Traders</button>
+                <button class="view-tab-btn" data-trading-view="opportunities">Opportunities</button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Section heading + stats -->
+        <div class="shrink-0 flex items-end justify-between px-4 md:px-8 pt-4 md:pt-6 pb-4">
+          <div>
+            <h2 class="text-2xl font-bold text-white mb-1" id="trading-heading">Trading</h2>
+            <div class="stats-row hidden">
+              <span class="text-sm text-slate-500">Showing </span><span class="stat-count text-sm text-slate-400 font-medium"></span><span class="text-sm text-slate-500"> traders from </span><span class="stat-file text-sm text-slate-400 font-mono"></span>
+            </div>
+          </div>
+          <span id="trading-result-count" class="hidden text-sm text-slate-600 tabular-nums pb-0.5 select-none"></span>
+        </div>
+
+        <p class="error-msg text-xs text-red-400 hidden shrink-0 px-8 pb-2"></p>
+
+        <!-- Trader cards grid -->
+        <div id="traders-list-container" class="flex-1 min-h-0 overflow-y-auto px-8 pb-8 custom-scrollbar">
+          <p class="text-xs text-slate-700 text-center py-20 italic select-none">No traders loaded.</p>
+        </div>
+
+        <!-- Trade opportunities list (hidden by default) -->
+        <div id="opportunities-container" class="hidden flex-1 min-h-0 overflow-y-auto px-8 pb-8 custom-scrollbar">
+          <p class="text-xs text-slate-700 text-center py-20 italic select-none">No data loaded.</p>
+        </div>
+        <button id="trading-scroll-top" class="scroll-top-btn" aria-label="Scroll to top" title="Back to top">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+      </section>
+
+      <!-- ── About section ── -->
+      <section id="section-about" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
+        <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <h2 class="text-2xl font-bold text-white">About</h2>
+        </header>
+        <div class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-8">
+
+          <!-- What is this -->
+          <div class="flex flex-col gap-3">
+            <h2 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">Empyrion Codex</h2>
+            <div class="h-0.5 w-14 rounded" style="background:linear-gradient(to right,#3b82f6,#6366f1)"></div>
+            <p class="text-[12px] text-slate-500">Made by <span class="text-slate-400 font-semibold">Dr. Dark</span></p>
+            <p class="text-[13px] text-slate-400 leading-relaxed">A community-made tool for browsing scenario data from <strong class="text-slate-300">Empyrion - Galactic Survival</strong>. Explore items, blocks, and traders from any scenario — seamlessly, with no installation required. Everything runs entirely in your browser, and none of your scenario data ever leaves your device.</p>
+            <p class="text-[13px] text-slate-400 leading-relaxed">Look up any item, block, or trader and get the most important information at a glance. Load a scenario folder directly from your disk, export and re-import the data as a compact <code class="text-slate-300 bg-zinc-800/60 px-1 rounded text-[12px]">.empcdx</code> file, and browse saved scenarios — all stored privately in your browser's IndexedDB cache.</p>
+          </div>
+
+          <!-- Inspiration -->
+          <div class="flex flex-col gap-3">
+            <h2 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">Inspiration</h2>
+            <div class="h-0.5 w-14 rounded" style="background:linear-gradient(to right,#6366f1,#a855f7)"></div>
+            <p class="text-[13px] text-slate-400 leading-relaxed">Empyrion Codex is inspired by <a href="https://empyrionbuddy.com" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors">EmpyrionBuddy</a>, with the goal of modernising the concept and making it even more intuitive. Unlike EmpyrionBuddy, this tool lets you load any scenario and explore it directly in the Codex. That said, EmpyrionBuddy shines in its own right and is well worth checking out.</p>
+            <p class="text-[13px] text-slate-400 leading-relaxed">Empyrion Codex is also open-source, meaning anyone can view the source code, report issues, or suggest improvements. If you're a developer, visit the GitHub repository below.</p>
+          </div>
+
+          <!-- Open source -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-6 flex flex-col gap-3" style="border-left-color:#3b82f6">
+            <h3 class="text-sm font-bold text-white">Open Source</h3>
+            <p class="text-[13px] text-slate-400 leading-relaxed">Contributions, bug reports, and feature requests are all welcome. Feel free to open an issue or submit a pull request on GitHub.</p>
+            <a href="https://github.com/DrDarkDK/empyrion-codex" target="_blank" rel="noopener noreferrer"
+               class="flex items-center gap-2 w-fit bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-900 text-slate-200 text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors border border-zinc-700 hover:border-zinc-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.373 0 12c0 5.303 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.298 24 12c0-6.627-5.373-12-12-12z"/></svg>
+              View on GitHub
+            </a>
+          </div>
+
+          <!-- Legal disclaimer -->
+          <div class="flex flex-col gap-4 pb-4">
+            <h2 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">Legal &amp; Privacy</h2>
+            <div class="h-0.5 w-14 rounded" style="background:linear-gradient(to right,#f59e0b,#ef4444)"></div>
+
+            <div class="grid grid-cols-1 gap-3">
+
+              <!-- Non-affiliation -->
+              <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4 flex gap-4" style="border-left-color:#f43f5e">
+                <div class="shrink-0 mt-0.5 text-rose-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/></svg>
+                </div>
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-widest text-rose-500/70 mb-1">No Affiliation</p>
+                  <p class="text-[13px] text-slate-400 leading-relaxed"><strong class="text-slate-300">Empyrion Codex</strong> is an independent, community-made tool and is not affiliated with, endorsed by, or in any way officially connected to <strong class="text-slate-300">Eleon Game Studios</strong> or the <strong class="text-slate-300">Empyrion - Galactic Survival</strong> game. All game names, trademarks, and related assets are the property of their respective owners.</p>
+                </div>
+              </div>
+
+              <!-- Intellectual property -->
+              <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4 flex gap-4" style="border-left-color:#f59e0b">
+                <div class="shrink-0 mt-0.5 text-amber-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-widest text-amber-500/70 mb-1">Intellectual Property</p>
+                  <p class="text-[13px] text-slate-400 leading-relaxed">Icons and other assets that may appear on this site are the intellectual property of <strong class="text-slate-300">Eleon Game Studios</strong>, the respective <strong class="text-slate-300">scenario creator</strong>, or both. Their display here is purely for identification purposes within the context of this fan tool.</p>
+                </div>
+              </div>
+
+              <!-- Privacy -->
+              <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4 flex gap-4" style="border-left-color:#10b981">
+                <div class="shrink-0 mt-0.5 text-emerald-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-widest text-emerald-500/70 mb-1">Your Data Stays on Your Computer</p>
+                  <p class="text-[13px] text-slate-400 leading-relaxed">All scenario files and configuration data you load are parsed entirely in your browser. No files, game data, or personal information are ever uploaded to or stored on any server. This site contains <strong class="text-slate-300">no analytics, no tracking scripts, and no cookies</strong>.</p>
+                  <p class="text-[13px] text-slate-400 leading-relaxed mt-2">This site is served via <strong class="text-slate-300">Cloudflare</strong>, which may process standard request metadata (such as IP addresses) as part of its infrastructure. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors">Cloudflare's Privacy Policy</a> for details.</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Settings section ── -->
+      <section id="section-settings" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
+        <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <h2 class="text-2xl font-bold text-white">Settings</h2>
+        </header>
+        <div class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-8">
+
+          <!-- Accessibility -->
+          <div class="flex flex-col gap-4">
+            <h2 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">Accessibility</h2>
+            <div class="h-0.5 w-14 rounded" style="background:linear-gradient(to right,#3b82f6,#6366f1)"></div>
+
+            <!-- UI size -->
+            <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-5 flex flex-col gap-3" style="border-left-color:#6366f1">
+              <div>
+                <p class="text-sm font-semibold text-white">UI Size</p>
+                <p class="text-xs text-slate-500 mt-0.5">Scales item &amp; trader detail drawers, All Items cards, trading cards, and Scenarios text.</p>
+              </div>
+              <div class="flex gap-2" id="ui-scale-btns">
+                <button class="settings-scale-btn" data-scale="normal">Normal</button>
+                <button class="settings-scale-btn" data-scale="lg">Large</button>
+                <button class="settings-scale-btn" data-scale="xl">Extra Large</button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── Item Detail Drawer ── -->
+    <div id="drawer-backdrop" class="fixed inset-0 z-40 hidden bg-black/40" aria-hidden="true"></div>
+    <aside id="item-drawer" class="drawer flex-col-reverse md:flex-col" role="dialog" aria-modal="true" aria-labelledby="drawer-title" aria-hidden="true">
+      <div class="flex items-center gap-3 px-5 py-4 border-t md:border-t-0 md:border-b border-slate-800 shrink-0">
+        <button id="drawer-back" class="hidden shrink-0 text-slate-500 hover:text-slate-100 transition-colors w-8 h-8 flex items-center justify-center rounded hover:bg-slate-800" title="Go back">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div id="drawer-icon" class="shrink-0 w-10 h-10 rounded-lg bg-slate-800/50 flex items-center justify-center text-blue-400"></div>
+        <div class="flex-1 min-w-0">
+          <p class="text-[10px] text-slate-500 uppercase tracking-widest" id="drawer-id"></p>
+          <h3 id="drawer-title" class="text-base font-bold text-white truncate"></h3>
+          <p id="drawer-subtitle" class="text-xs text-slate-500 truncate"></p>
+        </div>
+        <button id="drawer-share" class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link" aria-label="Copy link to this item">
+          <svg id="drawer-share-icon" class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span id="drawer-share-label" class="hidden">Copied!</span>
+        </button>
+        <button id="drawer-close" class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors w-8 h-8 flex items-center justify-center rounded hover:bg-slate-800">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="drawer-body" class="flex-1 overflow-y-auto p-5"></div>
+    </aside>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
+

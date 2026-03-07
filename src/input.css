@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+@layer components {
+  .modal { display: none; }
+  .modal.open { display: flex; }
+
+  .drawer {
+    @apply fixed top-0 right-0 bottom-0 z-50 flex flex-col
+           w-full max-w-[600px]
+           translate-x-full;
+    background: #0a0c10;
+    border-left: 1px solid rgb(30 41 59 / 0.5);
+    transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .drawer.open {
+    @apply translate-x-0;
+  }
+
+  .section-panel {
+    transition: opacity 200ms ease, filter 200ms ease;
+  }
+  main.drawer-open .section-panel {
+    opacity: 0.35;
+    filter: brightness(0.6);
+    pointer-events: none;
+  }
+
+  .sidebar-btn {
+    @apply flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium
+           text-slate-400 hover:bg-slate-800 hover:text-slate-200
+           cursor-pointer select-none transition-all duration-200;
+  }
+  .sidebar-btn:disabled {
+    @apply opacity-30 cursor-not-allowed pointer-events-none;
+  }
+  .sidebar-btn.active {
+    @apply bg-blue-600 text-white shadow-lg;
+    --tw-shadow-color: rgb(30 58 138 / 0.2);
+  }
+
+  .category-pill {
+    @apply text-[11px] font-semibold uppercase tracking-wide px-3 py-1.5 rounded-lg cursor-pointer select-none
+           bg-slate-900/50 border border-slate-800 text-slate-500
+           hover:border-slate-600 hover:text-slate-300 transition-colors;
+  }
+  .category-pill.active {
+    @apply border-blue-500/40 text-blue-400 bg-blue-500/10;
+  }
+
+  .vessel-btn {
+    @apply w-10 h-10 flex items-center justify-center rounded-lg
+           border border-slate-800 hover:border-slate-600
+           text-xs font-bold uppercase text-slate-400 hover:text-white
+           cursor-pointer select-none transition-all;
+  }
+  .vessel-btn.active {
+    @apply border-blue-500/50 text-blue-400 bg-blue-500/10;
+  }
+
+  .sort-btn {
+    @apply text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-md cursor-pointer select-none
+           border border-slate-800 text-slate-500
+           hover:border-slate-600 hover:text-slate-300 transition-colors;
+  }
+  .sort-btn.active {
+    @apply border-slate-600 bg-slate-800 text-slate-200;
+  }
+
+  .view-tab-btn {
+    @apply text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-md cursor-pointer select-none
+           border border-slate-800 text-slate-500
+           hover:border-slate-600 hover:text-slate-300 transition-colors;
+  }
+  .view-tab-btn.active {
+    @apply border-blue-500/50 text-blue-400 bg-blue-500/10;
+  }
+
+  .settings-scale-btn {
+    @apply text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer select-none
+           border border-slate-800 text-slate-500 bg-transparent
+           hover:border-slate-600 hover:text-slate-300 transition-colors;
+  }
+  .settings-scale-btn.active {
+    @apply border-blue-500/40 text-blue-400 bg-blue-500/10;
+  }
+}
+
+/* Hide number input spinners */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.no-spinner { -moz-appearance: textfield; }
+
+/* Custom scrollbar matching the reference */
+.custom-scrollbar::-webkit-scrollbar { width: 8px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #0a0c10; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+/* ── UI size accessibility overrides ─────────────────────────── */
+html[data-ui-scale="lg"] #item-drawer #drawer-body     { zoom: 1.2; }
+html[data-ui-scale="xl"] #item-drawer #drawer-body     { zoom: 1.4; }
+html[data-ui-scale="lg"] #items-list-container > div   { zoom: 1.2; }
+html[data-ui-scale="xl"] #items-list-container > div   { zoom: 1.4; }
+html[data-ui-scale="lg"] #traders-list-container > div { zoom: 1.2; }
+html[data-ui-scale="xl"] #traders-list-container > div { zoom: 1.4; }
+html[data-ui-scale="lg"] #scenarios-scroll             { zoom: 1.15; }
+html[data-ui-scale="xl"] #scenarios-scroll             { zoom: 1.3; }
+
+/* ── Scroll-to-top button ───────────────────────────────────── */
+.scroll-top-btn {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 2rem;
+  z-index: 30;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.5rem);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.15s, color 0.15s, border-color 0.15s;
+}
+.scroll-top-btn:hover {
+  background: #334155;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+.scroll-top-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}

@@ -96,15 +96,30 @@
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
 
+/* Prevent file inputs from triggering scroll-into-view on the scenarios page.
+   position:fixed is viewport-relative so no scroll container needs to scroll. */
+#scenarios-scroll input[type="file"] {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 /* ── UI size accessibility overrides ─────────────────────────── */
 html[data-ui-scale="lg"] #item-drawer #drawer-body     { zoom: 1.2; }
 html[data-ui-scale="xl"] #item-drawer #drawer-body     { zoom: 1.4; }
-html[data-ui-scale="lg"] #items-list-container > div   { zoom: 1.2; }
-html[data-ui-scale="xl"] #items-list-container > div   { zoom: 1.4; }
-html[data-ui-scale="lg"] #traders-list-container > div { zoom: 1.2; }
-html[data-ui-scale="xl"] #traders-list-container > div { zoom: 1.4; }
 html[data-ui-scale="lg"] #scenarios-scroll             { zoom: 1.15; }
 html[data-ui-scale="xl"] #scenarios-scroll             { zoom: 1.3; }
+html[data-ui-scale="lg"] #section-settings .custom-scrollbar > div { zoom: 1.15; }
+html[data-ui-scale="xl"] #section-settings .custom-scrollbar > div { zoom: 1.3; }
+html[data-ui-scale-items="lg"] #items-list-container > div   { zoom: 1.2; }
+html[data-ui-scale-items="xl"] #items-list-container > div   { zoom: 1.4; }
+html[data-ui-scale-trading="lg"] #traders-list-container > div { zoom: 1.5; }
+html[data-ui-scale-trading="xl"] #traders-list-container > div { zoom: 1.85; }
 
 /* ── Scroll-to-top button ───────────────────────────────────── */
 .scroll-top-btn {

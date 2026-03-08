@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Browse items, blocks, and traders from any Empyrion - Galactic Survival scenario. Everything runs in your browser — no installation, no uploads." />
+    <meta name="description" content="Browse items, blocks, and traders from any Empyrion - Galactic Survival scenario. Everything runs in your browser — no installation." />
     <title>Empyrion Codex</title>
     <link rel="stylesheet" href="dist/output.css" />
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
@@ -30,7 +30,7 @@
         </div>
         <div class="leading-none select-none">
           <p class="text-sm font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">EMPYRION</p>
-          <p class="text-[11px] font-bold tracking-tight text-slate-500 mt-0.5">CODEX</p>
+          <p class="text-[11px] font-bold tracking-tight text-slate-400 mt-0.5">CODEX</p>
         </div>
       </div>
 
@@ -177,6 +177,20 @@
 
         <div id="scenarios-scroll" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col">
 
+          <!-- Featured Scenarios -->
+          <div id="featured-scenarios-card" class="px-8 pt-8 pb-10 flex flex-col gap-5 bg-[#161920] border-b border-zinc-800/60">
+            <div class="flex flex-col gap-1">
+              <p class="text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">Featured Scenarios</p>
+              <p class="text-xs text-zinc-400">Ready to browse — no files needed. Click Load to fetch a scenario instantly.</p>
+            </div>
+            <div id="featured-scenarios-list" class="flex flex-wrap justify-center gap-4">
+              <p class="text-xs text-zinc-600 italic">Loading…</p>
+            </div>
+          </div>
+
+          <!-- Divider only shown when featured section is hidden (so hero isn't flush against the page top) -->
+          <div id="featured-scenarios-divider" class="hidden h-px bg-zinc-800/60 mx-8"></div>
+
           <!-- Hero import area -->
           <div class="flex flex-col items-center justify-center gap-6 py-14 px-8 select-none shrink-0">
 
@@ -203,15 +217,15 @@
               </label>
               <p class="text-[11px] text-zinc-400">Select the root folder of an Empyrion scenario — loads all config files at once</p>
               <div class="mt-1 flex flex-col gap-1 text-[10px] text-zinc-500 text-center leading-relaxed">
-                <span>Vanilla scenarios are usually at <code class="font-mono text-zinc-300">…\Steam\steamapps\common\Empyrion - Galactic Survival\Content\Scenarios</code></span>
-                <span>Workshop scenarios are usually at <code class="font-mono text-zinc-300">…\Steam\steamapps\workshop\content\383120</code></span>
+                <span class="select-text">Vanilla scenarios are usually at <code class="font-mono text-zinc-300">…\Steam\steamapps\common\Empyrion - Galactic Survival\Content\Scenarios</code></span>
+                <span class="select-text">Workshop scenarios are usually at <code class="font-mono text-zinc-300">…\Steam\steamapps\workshop\content\383120</code></span>
               </div>
             </div>
 
             <!-- Divider -->
             <div class="flex items-center gap-4 w-96">
               <div class="flex-1 h-px bg-zinc-800"></div>
-              <span class="text-[10px] text-zinc-500 uppercase tracking-widest">or load individual files</span>
+              <span class="text-[10px] text-zinc-400 uppercase tracking-widest">or load individual files</span>
               <div class="flex-1 h-px bg-zinc-800"></div>
             </div>
 
@@ -488,17 +502,48 @@
             <h2 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">Accessibility</h2>
             <div class="h-0.5 w-14 rounded" style="background:linear-gradient(to right,#3b82f6,#6366f1)"></div>
 
-            <!-- UI size -->
+            <!-- General UI size -->
             <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-5 flex flex-col gap-3" style="border-left-color:#6366f1">
               <div>
-                <p class="text-sm font-semibold text-white">UI Size</p>
-                <p class="text-xs text-slate-500 mt-0.5">Scales item &amp; trader detail drawers, All Items cards, trading cards, and Scenarios text.</p>
+                <p class="text-sm font-semibold text-white">General UI Size</p>
+                <p class="text-xs text-slate-500 mt-0.5">Scales item &amp; trader detail drawers, and Scenarios text.</p>
               </div>
               <div class="flex gap-2" id="ui-scale-btns">
                 <button class="settings-scale-btn" data-scale="normal">Normal</button>
                 <button class="settings-scale-btn" data-scale="lg">Large</button>
                 <button class="settings-scale-btn" data-scale="xl">Extra Large</button>
               </div>
+            </div>
+
+            <!-- Page-specific overrides (children of General UI Size) -->
+            <div class="flex gap-0 pl-5 border-l-2 border-slate-800/60 ml-3 flex-col gap-3">
+
+              <!-- All Items page size -->
+              <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-5 flex flex-col gap-3" style="border-left-color:#3b82f6">
+                <div>
+                  <p class="text-sm font-semibold text-white">All Items Size</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Overrides card size on the All Items page.</p>
+                </div>
+                <div class="flex gap-2" id="ui-scale-items-btns">
+                  <button class="settings-scale-btn" data-scale="normal">Normal</button>
+                  <button class="settings-scale-btn" data-scale="lg">Large</button>
+                  <button class="settings-scale-btn" data-scale="xl">Extra Large</button>
+                </div>
+              </div>
+
+              <!-- Trading page size -->
+              <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-5 flex flex-col gap-3 mt-3" style="border-left-color:#10b981">
+                <div>
+                  <p class="text-sm font-semibold text-white">Trading Size</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Overrides card size on the Trading page.</p>
+                </div>
+                <div class="flex gap-2" id="ui-scale-trading-btns">
+                  <button class="settings-scale-btn" data-scale="normal">Normal</button>
+                  <button class="settings-scale-btn" data-scale="lg">Large</button>
+                  <button class="settings-scale-btn" data-scale="xl">Extra Large</button>
+                </div>
+              </div>
+
             </div>
 
           </div>

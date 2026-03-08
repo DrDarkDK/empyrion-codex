@@ -7,7 +7,7 @@ const BLOCKED_TOP_PROPS = new Set([
   'RepairCount', 'NrSlots', 'Category', 'ShowUser', 'Crosshair', 'DegradationProb',
   'GlobalRef', 'XpFactor', 'NoRepairInputItem', 'AboveTerrainCheck', 'SymType',
   'PropHead', 'CustomIcon', 'PickupToToolbar', 'DurabilityBreaksAfter', 'LifetimeOnDrop',
-  'RadialMenu', 'MapIcon', 'Block Type', 'FoodDecayedItem',
+  'RadialMenu', 'MapIcon', 'Block Type', 'FoodDecayedItem', 'ExplosionHardness',
 ]);
 
 const BLOCKED_CHILD_PROPS = new Set([

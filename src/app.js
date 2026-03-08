@@ -185,7 +185,8 @@ function _populateDrawer(item) {
   drawerId.textContent       = item.id != null ? `#${item.id}` : '';
 
   // Update URL hash so this view can be bookmarked and shared
-  history.replaceState(null, '', `#item=${item.id ?? encodeURIComponent(item.name ?? '')}`);
+  const _itemHashPrefix = activeFeaturedIdx !== null ? `scenario=${activeFeaturedIdx}&` : '';
+  history.replaceState(null, '', `#${_itemHashPrefix}item=${item.id ?? encodeURIComponent(item.name ?? '')}`);
 
   const template = rawTemplatesCfg?.get(item.recipeName ?? item.name) ?? null;
   itemDetailRenderer.render(item, drawerBody, {
@@ -235,7 +236,11 @@ function closeDrawer() {
   mainEl.classList.remove('drawer-open');
   if (_drawerOpener && document.contains(_drawerOpener)) _drawerOpener.focus();
   _drawerOpener = null;
-  history.replaceState(null, '', location.pathname + location.search);
+  if (activeFeaturedIdx !== null) {
+    history.replaceState(null, '', `#scenario=${activeFeaturedIdx}`);
+  } else {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
 }
 
 function _populateTraderDrawer(trader) {
@@ -251,7 +256,8 @@ function _populateTraderDrawer(trader) {
   drawerId.textContent       = '';
 
   // Update URL hash so this view can be bookmarked and shared
-  history.replaceState(null, '', `#trader=${encodeURIComponent(trader.name ?? '')}`);
+  const _traderHashPrefix = activeFeaturedIdx !== null ? `scenario=${activeFeaturedIdx}&` : '';
+  history.replaceState(null, '', `#${_traderHashPrefix}trader=${encodeURIComponent(trader.name ?? '')}`);
 
   traderDetailRenderer.render(normalizeTraderTokens(trader), drawerBody, {
     resolveLocalized: resolveDisplayNameHtml,
@@ -332,27 +338,41 @@ drawerBack.addEventListener('click', () => {
 });
 
 /**
+ * Parses a URL hash string into a plain key→value object.
+ * Supports both single-param (#item=123) and multi-param (#scenario=0&item=123) formats.
+ * @param {string} [hashStr]
+ * @returns {Record<string,string>}
+ */
+function _parseHashParams(hashStr = location.hash) {
+  const hash = (hashStr ?? '').startsWith('#') ? hashStr.slice(1) : (hashStr ?? '');
+  const params = {};
+  for (const part of hash.split('&')) {
+    const eq = part.indexOf('=');
+    if (eq === -1) continue;
+    params[part.slice(0, eq)] = decodeURIComponent(part.slice(eq + 1));
+  }
+  return params;
+}
+
+/**
  * Reads a URL hash produced by _populateDrawer or _populateTraderDrawer and opens
  * the matching drawer. Call after data is fully loaded.
+ * The 'scenario' key is intentionally ignored here — featured scenario loading is
+ * handled upstream (fetchAndRenderFeaturedScenarios / featured load click handler).
  * @param {string} [hashStr] - Hash string to parse; defaults to the current location.hash.
  */
 function _tryRestoreFromHash(hashStr = location.hash) {
-  const hash = hashStr.startsWith('#') ? hashStr.slice(1) : hashStr;
-  if (!hash) return;
-  const eqIdx = hash.indexOf('=');
-  if (eqIdx === -1) return;
-  const type  = hash.slice(0, eqIdx);
-  const value = decodeURIComponent(hash.slice(eqIdx + 1));
-  if (!value) return;
+  const params = _parseHashParams(hashStr);
 
-  if (type === 'item') {
-    const id   = Number(value);
-    const item = (!isNaN(id) && id > 0)
+  if (params.item) {
+    const value = params.item;
+    const id    = Number(value);
+    const item  = (!isNaN(id) && id > 0)
       ? (lastItemResults?.find(i => i.id === id) ?? rawBlocksCfg?.find(b => b.id === id))
       : (lastItemResults?.find(i => i.name === value) ?? rawBlocksCfg?.find(b => b.name === value));
     if (item) { navigateTo('section-items'); openDrawer(item); }
-  } else if (type === 'trader') {
-    const trader = rawTradersCfg?.find(t => t.name === value);
+  } else if (params.trader) {
+    const trader = rawTradersCfg?.find(t => t.name === params.trader);
     if (trader) { navigateTo('section-trading'); openTraderDrawer(trader); }
   }
 }
@@ -836,6 +856,7 @@ function buildCategoryPills(items) {
  * @param {File} file
  */
 async function applyLocalization(file) {
+  activeFeaturedIdx = null;
   const text = await file.text();
   localizationMap = new LocalizationParser().parse(text);
 
@@ -854,6 +875,7 @@ async function applyLocalization(file) {
  * @returns {Promise<boolean>} true on success
  */
 async function loadEcfIntoSection(file, sectionEl) {
+  activeFeaturedIdx = null;
   const errorEl   = sectionEl.querySelector('.error-msg');
   const statsRow  = sectionEl.querySelector('.stats-row');
   const statFile  = sectionEl.querySelector('.stat-file');
@@ -933,6 +955,7 @@ async function loadEcfIntoSection(file, sectionEl) {
  * @param {File} file
  */
 async function loadTemplatesFile(file) {
+  activeFeaturedIdx = null;
   const text    = await file.text();
   const parser  = new TemplatesConfigParser();
   const results = parser.parse(text);
@@ -967,6 +990,7 @@ function findInScenario(files, ...segments) {
 document.getElementById('scenario-input').addEventListener('change', async (e) => {
   const files = Array.from(e.target.files);
   if (!files.length) return;
+  activeFeaturedIdx = null;
 
   // Save hash now — file loads trigger closeDrawer which would clear it
   const pendingHash = location.hash;
@@ -1005,10 +1029,6 @@ document.getElementById('scenario-input').addEventListener('change', async (e) =
   // Auto-save to browser cache
   await persistScenario(await buildExportPayload());
   renderSavedScenarios();
-
-  // Auto-navigate: prefer items, fall back to trading
-  if (itemsFile || blocksFile) navigateTo('section-items');
-  else if (traderFile)         navigateTo('section-trading');
 
   _tryRestoreFromHash(pendingHash);
 });
@@ -1156,9 +1176,17 @@ function updateExportStatus() {
   const status = document.getElementById('export-status');
   if (!btn || !status) return;
   const hasData = !!(rawItemsCfg || rawBlocksCfg || rawTradersCfg || rawTemplatesCfg || localizationMap);
-  btn.disabled = !hasData;
+  const isFeatured = activeFeaturedIdx !== null;
+  btn.disabled = !hasData || isFeatured;
   const heroLabel = document.getElementById('hero-load-status');
-  if (hasData) {
+  if (hasData && isFeatured) {
+    status.textContent = 'Export not available for built-in scenarios';
+    if (heroLabel) {
+      const name = document.getElementById('scenario-name')?.textContent?.trim();
+      heroLabel.textContent = name || 'Data loaded';
+      heroLabel.className = 'text-sm tracking-widest uppercase text-amber-400';
+    }
+  } else if (hasData) {
     const parts = [];
     const itemCount = lastItemResults?.length ?? 0;
     if (itemCount)           parts.push(`${itemCount} items`);
@@ -1182,6 +1210,9 @@ function updateExportStatus() {
 }
 
 document.getElementById('export-btn')?.addEventListener('click', async () => {
+  if (activeFeaturedIdx !== null) return;
+  const hasData = !!(rawItemsCfg || rawBlocksCfg || rawTradersCfg || rawTemplatesCfg || localizationMap);
+  if (!hasData) return;
   const data = await buildExportPayload();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
@@ -1286,14 +1317,15 @@ async function applyEmpdbData(data) {
 
   updateExportStatus();
   closeDrawer();
-  if (lastItemResults?.length)  { rerenderItems();   navigateTo('section-items');   }
-  if (rawTradersCfg?.length)    { rerenderTraders(); if (!lastItemResults?.length) navigateTo('section-trading'); }
+  if (lastItemResults?.length)  rerenderItems();
+  if (rawTradersCfg?.length)    rerenderTraders();
   _tryRestoreFromHash(pendingHash);
 }
 
 document.getElementById('empdb-input')?.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  activeFeaturedIdx = null;
   try {
     const data = JSON.parse(await file.text());
     await applyEmpdbData(data);
@@ -1305,6 +1337,123 @@ document.getElementById('empdb-input')?.addEventListener('change', async (e) => 
   // reset so the same file can be re-imported
   e.target.value = '';
 });
+
+// ── Featured scenarios ───────────────────────────────────────
+//
+// Drop .empcdx files into src/scenarios/ and register them in
+// src/scenarios/manifest.json using this shape:
+// [{ "name": "...", "description": "...", "version": "...",
+//    "image": "scenarios/images/my-cover.jpg", "file": "scenarios/my.empcdx" }]
+//
+// The manifest is fetched once on startup. Full .empcdx data is only fetched
+// when the user explicitly clicks Load.
+
+let featuredManifest   = [];
+let activeFeaturedIdx  = null;
+
+const FEATURED_PLACEHOLDER_SVG = `<svg xmlns='http://www.w3.org/2000/svg' class='w-10 h-10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='12' cy='12' r='10'/><line x1='2' y1='12' x2='22' y2='12'/><path d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'/></svg>`;
+
+function _hideFeaturedSection() {
+  const card    = document.getElementById('featured-scenarios-card');
+  const divider = document.getElementById('featured-scenarios-divider');
+  if (card)    card.hidden    = true;
+  if (divider) divider.hidden = true;
+}
+
+function _updateFeaturedButtons() {
+  document.querySelectorAll('[data-featured-load]').forEach(btn => {
+    const isLoaded = Number(btn.dataset.featuredLoad) === activeFeaturedIdx;
+    btn.disabled    = isLoaded;
+    btn.textContent = isLoaded ? '✓ Loaded' : 'Load Scenario';
+    btn.className   = isLoaded
+      ? 'text-xs px-4 py-1.5 rounded-lg bg-zinc-700 text-zinc-400 font-semibold cursor-default'
+      : 'text-xs px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:bg-amber-600 disabled:opacity-40 disabled:pointer-events-none text-zinc-950 font-semibold transition-colors';
+  });
+}
+
+function _renderFeaturedScenarios() {
+  const el = document.getElementById('featured-scenarios-list');
+  if (!el) return;
+  el.innerHTML = featuredManifest.map((s, i) => {
+    const isLoaded = i === activeFeaturedIdx;
+    const imgHtml = s.image
+      ? `<img src="${escapeHtml(s.image)}" alt="" class="w-full h-full object-cover"
+             width="240" height="135" loading="lazy" decoding="async"
+             onerror="this.style.display='none';this.nextElementSibling.removeAttribute('hidden')" />
+         <div hidden class="w-full h-full flex items-center justify-center text-zinc-700">${FEATURED_PLACEHOLDER_SVG}</div>`
+      : `<div class="w-full h-full flex items-center justify-center text-zinc-700">${FEATURED_PLACEHOLDER_SVG}</div>`;
+    return `<div class="w-full max-w-[380px] shrink-0 flex flex-col min-[400px]:flex-row rounded-xl border border-zinc-700/50 hover:border-zinc-500/70 overflow-hidden bg-[#0d1018] shadow-lg shadow-black/50 transition-colors">
+  <div class="w-full aspect-video min-[400px]:w-44 min-[400px]:aspect-auto shrink-0 bg-[#08090e] overflow-hidden">${imgHtml}</div>
+  <div class="flex-1 p-4 flex flex-col gap-1 min-w-0">
+    <p class="text-sm font-bold text-white leading-snug">${escapeHtml(s.name ?? '')}</p>
+    ${s.version ? `<p class="text-[10px] text-zinc-400 uppercase tracking-widest">${escapeHtml(String(s.version))}</p>` : ''}
+    ${s.description ? `<p class="text-xs text-zinc-400 leading-relaxed mt-1.5">${escapeHtml(s.description)}</p>` : ''}
+    <div class="mt-auto pt-3">
+      <button data-featured-load="${i}" ${isLoaded ? 'disabled' : ''} class="text-xs px-4 py-1.5 rounded-lg ${isLoaded ? 'bg-zinc-700 text-zinc-400 font-semibold cursor-default' : 'bg-amber-500 hover:bg-amber-400 active:bg-amber-600 disabled:opacity-40 disabled:pointer-events-none text-zinc-950 font-semibold transition-colors'}">${isLoaded ? '✓ Loaded' : 'Load Scenario'}</button>
+    </div>
+  </div>
+</div>`;
+  }).join('');
+}
+
+async function fetchAndRenderFeaturedScenarios() {
+  try {
+    const res = await fetch('scenarios/manifest.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    featuredManifest = await res.json();
+  } catch {
+    // Manifest unavailable (local dev, server not configured) — hide silently
+    _hideFeaturedSection();
+    return;
+  }
+
+  if (!Array.isArray(featuredManifest) || !featuredManifest.length) {
+    _hideFeaturedSection();
+    return;
+  }
+
+  _renderFeaturedScenarios();
+
+  // Auto-load a featured scenario if one is specified in the startup URL hash
+  const startupParams = _parseHashParams(location.hash);
+  if (startupParams.scenario !== undefined) {
+    const idx   = Number(startupParams.scenario);
+    const entry = featuredManifest[idx];
+    if (entry?.file) {
+      try {
+        const r = await fetch(entry.file);
+        if (r.ok) {
+          activeFeaturedIdx = idx;
+          await applyEmpdbData(await r.json());
+          _updateFeaturedButtons();
+        }
+      } catch { /* ignore — user can load manually */ }
+    }
+  }
+}
+
+document.getElementById('featured-scenarios-list')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-featured-load]');
+  if (!btn) return;
+  const entry = featuredManifest[Number(btn.dataset.featuredLoad)];
+  if (!entry?.file) return;
+  btn.disabled    = true;
+  btn.textContent = 'Loading…';
+  try {
+    const r = await fetch(entry.file);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    activeFeaturedIdx = Number(btn.dataset.featuredLoad);
+    await applyEmpdbData(await r.json());
+    _updateFeaturedButtons();
+  } catch (err) {
+    alert(`Failed to load "${escapeHtml(entry.name ?? '')}": ${err.message}`);
+    activeFeaturedIdx = null;
+    btn.disabled    = false;
+    btn.textContent = 'Load Scenario';
+  }
+});
+
+fetchAndRenderFeaturedScenarios();
 
 // ── Scroll-to-top buttons ─────────────────────────────────────────────────────
 [
@@ -1360,6 +1509,7 @@ async function renderSavedScenarios() {
 document.getElementById('saved-scenarios-list')?.addEventListener('click', async (e) => {
   const loadBtn = e.target.closest('[data-load-scenario]');
   if (loadBtn) {
+    activeFeaturedIdx = null;
     try { await applyEmpdbData((await db.getScenario(Number(loadBtn.dataset.loadScenario)))?.data); }
     catch (err) { alert(`Failed to load: ${err.message}`); }
     return;
@@ -1384,10 +1534,22 @@ function _writeSettings(s) {
 }
 
 function applySettings(s) {
-  const scale = s.uiScale ?? 'normal';
-  document.documentElement.dataset.uiScale = scale;
+  const scale        = s.uiScale        ?? 'normal';
+  const scaleItems   = s.uiScaleItems   ?? 'normal';
+  const scaleTrading = s.uiScaleTrading ?? 'normal';
+
+  document.documentElement.dataset.uiScale        = scale;
+  document.documentElement.dataset.uiScaleItems   = scaleItems;
+  document.documentElement.dataset.uiScaleTrading = scaleTrading;
+
   document.querySelectorAll('#ui-scale-btns .settings-scale-btn').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.scale === scale)
+  );
+  document.querySelectorAll('#ui-scale-items-btns .settings-scale-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.scale === scaleItems)
+  );
+  document.querySelectorAll('#ui-scale-trading-btns .settings-scale-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.scale === scaleTrading)
   );
 }
 
@@ -1398,6 +1560,24 @@ document.getElementById('ui-scale-btns')?.addEventListener('click', (e) => {
   if (!btn) return;
   const s = _readSettings();
   s.uiScale = btn.dataset.scale;
+  _writeSettings(s);
+  applySettings(s);
+});
+
+document.getElementById('ui-scale-items-btns')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.settings-scale-btn[data-scale]');
+  if (!btn) return;
+  const s = _readSettings();
+  s.uiScaleItems = btn.dataset.scale;
+  _writeSettings(s);
+  applySettings(s);
+});
+
+document.getElementById('ui-scale-trading-btns')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.settings-scale-btn[data-scale]');
+  if (!btn) return;
+  const s = _readSettings();
+  s.uiScaleTrading = btn.dataset.scale;
   _writeSettings(s);
   applySettings(s);
 });

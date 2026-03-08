@@ -52,6 +52,10 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
 # Node / Tailwind
 node_modules/
 src/dist/
+
+# Featured Scenarios
+src/scenarios/

@@ -24,7 +24,8 @@ const BLOCKED_PROPS = new Set([
   'SymType', 'ThrusterBoosterFactor', 'SoundOpen', 'SoundClose', 'ROF',
   'ReloadDelay', 'GlobalRef', 'IsAntiInfantryWeapon', 'AboveTerrainCheck',
   'ADBDroneAmmoType', 'ADBDockingSpeedFac', 'ADBActionRadius', 'ADBMaxReserve',
-  'ADBMaxActiveDrone', 'ADBMaxSpawner', 'ADBDroneType',
+  'ADBMaxActiveDrone', 'ADBMaxSpawner', 'ADBDroneType', 'ExplosionHardness',
+  'RemoveOnSI',
 ]);
 
 /**

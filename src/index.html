@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Browse items, blocks, and traders from any Empyrion - Galactic Survival scenario. Everything runs in your browser — no installation." />
     <title>Empyrion Codex</title>
     <link rel="stylesheet" href="dist/output.css" />
@@ -48,6 +48,33 @@
           </svg>
           Trading
         </button>
+        <!-- Trading sub-navigation — only visible while Trading is the active section -->
+        <div id="trading-subnav" class="hidden flex flex-col ml-3 gap-0.5" role="group" aria-label="Trading sub-navigation">
+          <button id="traders-nav-btn" class="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800/60 hover:text-slate-300 transition-colors cursor-pointer select-none" aria-current="false">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            Traders
+          </button>
+          <button id="opportunities-nav-btn" class="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800/60 hover:text-slate-300 transition-colors cursor-pointer select-none" aria-current="false">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Opportunities
+          </button>
+          <button id="locations-nav-btn" class="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800/60 hover:text-slate-300 transition-colors cursor-pointer select-none" aria-current="false">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            My Locations
+          </button>
+          <button id="routes-nav-btn" class="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800/60 hover:text-slate-300 transition-colors cursor-pointer select-none" aria-current="false">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            Routes
+          </button>
+        </div>
         <button class="sidebar-btn" data-section="scenarios">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/>
@@ -64,6 +91,21 @@
           </svg>
           About
         </button>
+        <!-- About sub-navigation — only visible while About is the active section -->
+        <div id="about-subnav" class="hidden flex flex-col ml-3 gap-0.5" role="group" aria-label="About sub-navigation">
+          <button id="about-nav-btn" class="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800/60 hover:text-slate-300 transition-colors cursor-pointer select-none" aria-current="false">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            About
+          </button>
+          <button id="changelog-nav-btn" class="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-800/60 hover:text-slate-300 transition-colors cursor-pointer select-none" aria-current="false">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Changelog
+          </button>
+        </div>
         <button class="sidebar-btn" data-section="settings">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/>
@@ -137,7 +179,7 @@
         <div id="items-list-container" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
 
           <!-- Category pills + sort/filter row — populated dynamically, revealed on load -->
-          <div id="items-toolbar" class="hidden px-4 md:px-8 pt-3 pb-3 md:pb-4 md:sticky md:top-0 md:bg-[#0f1115] md:z-10 md:border-b md:border-slate-800/30">
+          <div id="items-toolbar" class="hidden px-4 md:px-8 pt-3 pb-3 md:pb-4 md:sticky md:top-0 md:bg-[#0f1115] md:z-20 md:border-b md:border-slate-800/30">
             <div id="category-pills" class="flex flex-wrap gap-2"></div>
             <!-- Sort & price filter -->
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 pt-3 border-t border-slate-800/40">
@@ -159,14 +201,27 @@
           </div>
 
           <!-- Items grid -->
-          <div id="items-grid" class="px-4 md:px-8 pb-8">
+          <div id="items-grid" class="px-4 md:px-8 pt-3 pb-8">
             <p class="text-xs text-slate-700 text-center py-20 italic select-none">No items loaded.</p>
           </div>
 
-        </div>
+        </div><!-- end items-list-container -->
         <button id="items-scroll-top" class="scroll-top-btn" aria-label="Scroll to top" title="Back to top">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
         </button>
+
+        <!-- Compare bar — revealed when ≥1 item is pinned -->
+        <div id="compare-bar" class="hidden shrink-0 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 md:px-8 pt-2.5 pb-safe md:py-2.5 bg-[#0d1018] border-t border-blue-500/25">
+          <div class="flex items-center gap-2 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span class="text-xs text-blue-400 uppercase tracking-widest select-none">Comparing</span>
+          </div>
+          <div id="compare-bar-items" class="order-last w-full flex flex-wrap items-center gap-1.5 min-w-0 md:order-none md:w-auto md:flex-1 md:flex-nowrap md:overflow-x-auto"></div>
+          <div class="flex items-center gap-2 shrink-0 ml-auto">
+            <button id="compare-bar-clear" class="text-xs text-zinc-600 hover:text-zinc-300 transition-colors px-2 py-1.5 rounded hover:bg-zinc-800" title="Clear all pinned items">Clear</button>
+            <button id="compare-bar-open" disabled class="text-xs px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-40 disabled:pointer-events-none text-white font-semibold transition-colors">Compare</button>
+          </div>
+        </div>
       </section>
 
       <!-- ── Scenarios section ── -->
@@ -361,7 +416,7 @@
             <!-- Separator: vertical on sm+, horizontal on mobile -->
             <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
             <div class="sm:hidden h-px bg-slate-800/60"></div>
-            <!-- Group 2: sort + view toggle -->
+            <!-- Group 2: sort -->
             <div class="flex items-center gap-3 flex-wrap">
               <div class="flex items-center gap-2">
                 <span class="text-xs uppercase tracking-widest text-slate-600 select-none">Sort</span>
@@ -371,11 +426,6 @@
                   <option value="max-sell-price">Max sell price</option>
                   <option value="max-qty">Max quantity</option>
                 </select>
-              </div>
-              <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
-              <div class="flex gap-1">
-                <button class="view-tab-btn active" data-trading-view="traders">Traders</button>
-                <button class="view-tab-btn" data-trading-view="opportunities">Opportunities</button>
               </div>
             </div>
           </div>
@@ -406,6 +456,56 @@
         <button id="trading-scroll-top" class="scroll-top-btn" aria-label="Scroll to top" title="Back to top">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
         </button>
+      </section>
+
+      <!-- ── Locations section ── -->
+      <section id="section-locations" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
+        <header class="shrink-0 flex items-center gap-4 px-4 md:px-8 h-16 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          <h2 class="text-xl font-bold text-white">My Locations</h2>
+        </header>
+        <div id="locations-page-container" class="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 custom-scrollbar">
+          <p class="text-xs text-slate-700 text-center py-20 italic select-none">No locations saved yet.</p>
+        </div>
+      </section>
+
+      <!-- ── Routes section ── -->
+      <section id="section-routes" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
+        <header class="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 md:px-8 py-3 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <div class="flex items-center gap-3 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <h2 class="text-xl font-bold text-white">Routes</h2>
+          </div>
+          <div class="ml-auto flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
+              <button id="export-user-data-json-btn" class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800/50 text-emerald-300 hover:bg-emerald-900/60 hover:border-emerald-700/60 hover:text-emerald-200 transition-colors" title="Export locations &amp; routes as JSON (re-importable)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                JSON
+              </button>
+              <button id="export-user-data-csv-btn" class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-sky-950/60 border border-sky-800/50 text-sky-300 hover:bg-sky-900/60 hover:border-sky-700/60 hover:text-sky-200 transition-colors" title="Export locations &amp; routes as CSV (human-readable)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                CSV
+              </button>
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs px-3 py-1.5 rounded-lg bg-amber-950/60 border border-amber-800/50 text-amber-300 hover:bg-amber-900/60 hover:border-amber-700/60 hover:text-amber-200 transition-colors" title="Import a previously exported JSON file">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import
+                <input id="import-user-data-input" type="file" class="sr-only" accept=".json" />
+              </label>
+            </div>
+            <div class="hidden sm:block w-px h-4 bg-slate-700 mx-0.5 shrink-0" aria-hidden="true"></div>
+            <button id="routes-new-btn" class="shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-700/50 border border-indigo-600/40 text-indigo-200 hover:bg-indigo-600/60 hover:border-indigo-500/50 hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Route
+            </button>
+          </div>
+        </header>
+        <div id="routes-page-container" class="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 custom-scrollbar">
+          <p class="text-xs text-slate-700 text-center py-20 italic select-none">No routes yet.</p>
+        </div>
       </section>
 
       <!-- ── About section ── -->
@@ -490,6 +590,58 @@
         </div>
       </section>
 
+      <!-- ── Changelog section ── -->
+      <section id="section-changelog" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
+        <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <h2 class="text-2xl font-bold text-white">Changelog</h2>
+        </header>
+        <div class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-5">
+
+          <!-- v1.1 — 2026-03-09 -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+              <span class="text-xs font-bold text-teal-300 bg-teal-950/60 border border-teal-800/50 px-2.5 py-0.5 rounded-full">v1.2.0</span>
+              <span class="text-[11px] text-zinc-500">March 9, 2026</span>
+            </div>
+            <ul class="flex flex-col gap-1.5">
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added item comparison, allowing you to easily compare up to four different items.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added small colored dots next to the icons of some blocks, indicating what type of structure they can be placed on (e.g., base, capital vessel, etc.).</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added new My Locations page under Trading, which lets you easily keep track of trader locations across playfields and POIs.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added new Routes page under Trading as an extension to the new trader locations, where you can easily plan your trading routes.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added changelog page.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Fixed some bugs and improved performance on the All Items page.</span></li>
+            </ul>
+          </div>
+
+          <!-- v1.1.0 — 2026-03-08 -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+              <span class="text-xs font-bold text-teal-300 bg-teal-950/60 border border-teal-800/50 px-2.5 py-0.5 rounded-full">v1.1.0</span>
+              <span class="text-[11px] text-zinc-500">March 8th, 2026</span>
+            </div>
+            <ul class="flex flex-col gap-1.5">
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-indigo-500/60 shrink-0 mt-[3px]">▸</span><span>Added some featured scenarios to the Scenarios page.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-indigo-500/60 shrink-0 mt-[3px]">▸</span><span>Improved deep-links for items, when a featured scenario is loaded.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-indigo-500/60 shrink-0 mt-[3px]">▸</span><span>Increased the impact of the UI size settings, improving the readability on many screens.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-indigo-500/60 shrink-0 mt-[3px]">▸</span><span>Fixed various bugs.</span></li>
+            </ul>
+          </div>
+
+          <!-- v1.0.0 — 2026-03-07 -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#6366f1">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+              <span class="text-xs font-bold text-indigo-300 bg-indigo-950/60 border border-indigo-800/50 px-2.5 py-0.5 rounded-full">v1.0.0</span>
+              <span class="text-[11px] text-zinc-500">March 7th, 2026</span>
+              <span class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400/50 ml-auto">Initial Release</span>
+            </div>
+            <ul class="flex flex-col gap-1.5">
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-indigo-500/60 shrink-0 mt-[3px]">▸</span><span>Initial release, containing a detailed item and trading overviews.</span></li>
+            </ul>
+          </div>
+
+        </div>
+      </section>
+
       <!-- ── Settings section ── -->
       <section id="section-settings" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
         <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
@@ -552,6 +704,42 @@
       </section>
 
     </main>
+
+    <!-- ── Import confirmation modal ── -->
+    <div id="import-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="import-confirm-title">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="import-confirm-backdrop"></div>
+      <div class="relative bg-[#161920] border border-zinc-700 rounded-2xl p-6 max-w-sm w-full flex flex-col gap-4 shadow-2xl">
+        <h3 id="import-confirm-title" class="text-base font-bold text-white">Import Locations &amp; Routes?</h3>
+        <div id="import-confirm-body" class="text-[13px] text-slate-400 leading-relaxed flex flex-col gap-1"></div>
+        <div class="flex gap-2 justify-end mt-1">
+          <button id="import-confirm-cancel" class="text-sm font-semibold px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white border border-zinc-700 hover:border-zinc-600 transition-colors">Cancel</button>
+          <button id="import-confirm-ok" class="text-sm font-semibold px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white transition-colors">Import &amp; Merge</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Compare Overlay ── -->
+    <div id="compare-overlay" class="hidden fixed inset-0 z-50 flex flex-col-reverse min-[1000px]:flex-col bg-[#0a0c10]" role="dialog" aria-modal="true" aria-label="Compare Items">
+      <!-- Overlay toolbar -->
+      <div class="shrink-0 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 md:px-5 py-2.5 md:py-3 border-t border-slate-800 min-[1000px]:border-t-0 min-[1000px]:border-b bg-[#0a0c10] z-10">
+        <div class="flex items-center gap-2 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <h2 class="text-sm font-bold text-white select-none">Compare Items</h2>
+          <span id="compare-overlay-count" class="text-xs text-zinc-600 select-none"></span>
+        </div>
+        <div class="flex-1"></div>
+        <label class="hidden min-[1000px]:flex items-center gap-2.5 cursor-pointer select-none group" title="Show only rows where values differ">
+          <input type="checkbox" id="compare-diff-only" class="sr-only" />
+          <span class="diff-toggle-track"></span>
+          <span class="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">Differences only</span>
+        </label>
+        <button id="compare-overlay-close" class="shrink-0 text-zinc-600 hover:text-zinc-100 transition-colors w-8 h-8 flex items-center justify-center rounded hover:bg-slate-800" aria-label="Close comparison">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <!-- Scrollable comparison content — written by CompareRenderer -->
+      <div id="compare-overlay-body" class="flex-1 overflow-auto"></div>
+    </div>
 
     <!-- ── Item Detail Drawer ── -->
     <div id="drawer-backdrop" class="fixed inset-0 z-40 hidden bg-black/40" aria-hidden="true"></div>

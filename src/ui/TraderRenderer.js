@@ -29,6 +29,7 @@ export class TraderRenderer {
    * @param {'all'|'sells'|'buys'}          [options.tradingShow]      - Direction filter
    * @param {function(string): void}        [options.onTraderClick]    - Called with trader devName on click
    * @param {string}                        [options.itemSearchQuery]  - Filter chips by search text
+   * @param {function(string): number}      [options.getLocationCount] - Returns annotation count for a trader devName
    */
   render(traders, containerEl, options = {}) {
     const {
@@ -41,6 +42,7 @@ export class TraderRenderer {
       tradingShow = 'all',
       onTraderClick = null,
       itemSearchQuery = '',
+      getLocationCount = null,
     } = options;
     // Clean up previous render
     for (const url of this._iconUrls) URL.revokeObjectURL(url);
@@ -102,7 +104,7 @@ export class TraderRenderer {
         const el = /** @type {HTMLElement} */ (entry.target);
         const idx = Number(el.dataset.traderIdx);
         const inner = this._cardInner(
-          traders[idx], resolveLocalized, resolveIconUrl, npcSellMax, npcBuyMin, getMarketPrice, tradingShow, itemSearchQuery
+          traders[idx], resolveLocalized, resolveIconUrl, npcSellMax, npcBuyMin, getMarketPrice, tradingShow, itemSearchQuery, getLocationCount
         );
         if (inner === null) {
           el.style.display = 'none';
@@ -117,13 +119,22 @@ export class TraderRenderer {
   }
 
   /** Returns the inner HTML for a trader card (the outer wrapper is the placeholder div). */
-  _cardInner(trader, resolveLocalized, resolveIconUrl, npcSellMax, npcBuyMin, getMarketPrice, tradingShow, itemSearchQuery = '') {
+  _cardInner(trader, resolveLocalized, resolveIconUrl, npcSellMax, npcBuyMin, getMarketPrice, tradingShow, itemSearchQuery = '', getLocationCount = null) {
     const name = resolveLocalized
       ? (resolveLocalized(trader.name ?? '') || escapeHtml(trader.name || 'Unknown Trader'))
       : escapeHtml(trader.name ?? 'Unknown Trader');
 
     const discountBadge = trader.discount != null
       ? `<span class="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-800/60 text-emerald-400 font-medium">${Math.round(Number(trader.discount) * 100)}% discount</span>`
+      : '';
+
+    const locationCount = getLocationCount ? (getLocationCount(trader.name) ?? 0) : 0;
+    const pinBadge = locationCount > 0
+      ? `<span class="shrink-0 flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-teal-950/50 border border-teal-800/50 text-teal-400">` +
+          `<svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">` +
+            `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>` +
+          `</svg>` +
+          `${locationCount}</span>`
       : '';
 
     let quoteHtml = '';
@@ -141,10 +152,12 @@ export class TraderRenderer {
       ? `<div class="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-4 gap-y-3 min-w-0">${sellingHtml}${buyingHtml}</div>`
       : (sellingHtml || buyingHtml);
 
+    const badgesHtml = [pinBadge, discountBadge].filter(Boolean).join('');
     return (
       `<div class="flex items-start justify-between gap-3 min-w-0">` +
       `<button data-trader-ref="${escapeHtml(trader.name ?? '')}" class="text-sm font-bold text-white truncate text-left hover:text-amber-400 transition-colors flex-1 min-w-0">${name}</button>` +
-      `${discountBadge}</div>` +
+      (badgesHtml ? `<div class="flex items-center gap-1.5 shrink-0">${badgesHtml}</div>` : '') +
+      `</div>` +
       `${quoteHtml}${sectionsHtml}`
     );
   }

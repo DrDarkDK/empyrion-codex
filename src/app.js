@@ -5,9 +5,29 @@ import { ItemListRenderer } from './ui/ItemListRenderer.js';
 import { ItemDetailRenderer } from './ui/ItemDetailRenderer.js';
 import { TraderRenderer } from './ui/TraderRenderer.js';
 import { TraderDetailRenderer } from './ui/TraderDetailRenderer.js';
+import { TraderLocationEditor } from './ui/TraderLocationEditor.js';
+import { LocationsPageRenderer } from './ui/LocationsPageRenderer.js';
+import { RoutesPageRenderer } from './ui/RoutesPageRenderer.js';
+import { CompareState } from './ui/CompareState.js';
+import { CompareRenderer } from './ui/CompareRenderer.js';
+import { buildComparison } from './ui/CompareBuilder.js';
 import { getCategoryIcon } from './ui/categoryIcons.js';
 import { escapeHtml, parseQtyRange, estimatePriceRange } from './ui/renderUtils.js';
+import { buildLocationsRoutesJson, buildLocationsRoutesCsv } from './ui/exportCodex.js';
 import * as db from './db.js';
+import {
+  getTraderLocations,
+  getAllTraderLocationCounts,
+  getAllTraderLocations,
+  addTraderLocation,
+  updateTraderLocation,
+  deleteTraderLocation,
+  markTraderLocationVisited,
+  getRoutes,
+  addRoute,
+  updateRoute,
+  deleteRoute,
+} from './db.js';
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const navButtons    = document.querySelectorAll('.sidebar-btn');
@@ -15,18 +35,79 @@ const sectionPanels = document.querySelectorAll('.section-panel');
 
 function navigateTo(sectionId) {
   const key = sectionId.replace('section-', '');
-  // Don't navigate to a section whose nav button is disabled
-  const targetBtn = [...navButtons].find(b => b.dataset.section === key);
+
+  // 'locations' and 'routes' are sub-sections of 'trading' — the trading nav button stays active.
+  // 'changelog' is a sub-section of 'about' — the about nav button stays active.
+  const activeNavKey = (key === 'locations' || key === 'routes') ? 'trading'
+                     : (key === 'changelog') ? 'about'
+                     : key;
+
+  // Don't navigate to a section whose nav button is disabled.
+  const targetBtn = [...navButtons].find(b => b.dataset.section === activeNavKey);
   if (targetBtn?.disabled) return;
+
+  // Clear the locations auto-refresh timer when navigating away from that section.
+  if (currentSectionId !== sectionId && locationsRefreshTimer != null) {
+    clearInterval(locationsRefreshTimer);
+    locationsRefreshTimer = null;
+  }
+
+  currentSectionId = sectionId;
+
   navButtons.forEach(b => {
-    const on = b.dataset.section === key;
+    const on = b.dataset.section === activeNavKey;
     b.classList.toggle('active', on);
     if (on) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
+
   sectionPanels.forEach(s => s.classList.add('hidden'));
   document.getElementById(sectionId).classList.remove('hidden');
+
+  // Show trading sub-nav only while Trading or its sub-pages are active.
+  const tradingSubnav = document.getElementById('trading-subnav');
+  if (tradingSubnav) tradingSubnav.classList.toggle('hidden', activeNavKey !== 'trading');
+
+  // Show about sub-nav only while About or its sub-pages are active.
+  const aboutSubnav = document.getElementById('about-subnav');
+  if (aboutSubnav) aboutSubnav.classList.toggle('hidden', activeNavKey !== 'about');
+
+  syncTradingSubnav();
+  syncAboutSubnav();
+
   if (sectionId === 'section-scenarios') renderSavedScenarios();
+  if (sectionId === 'section-locations') renderLocationsPage();
+  if (sectionId === 'section-routes')    renderRoutesPage();
+}
+
+/**
+ * Syncs the active highlight on all four Trading sub-nav buttons based on the
+ * current section and trading view.  Must be called after any change to either.
+ */
+function syncTradingSubnav() {
+  const onTrading   = currentSectionId === 'section-trading';
+  const onLocations = currentSectionId === 'section-locations';
+  const onRoutes    = currentSectionId === 'section-routes';
+  _setSubnavBtnActive('traders-nav-btn',       onTrading && tradingView === 'traders');
+  _setSubnavBtnActive('opportunities-nav-btn', onTrading && tradingView === 'opportunities');
+  _setSubnavBtnActive('locations-nav-btn',     onLocations);
+  _setSubnavBtnActive('routes-nav-btn',        onRoutes);
+}
+
+/** Toggles the active visual state on a Trading sub-nav button element. */
+function _setSubnavBtnActive(id, active) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.classList.toggle('text-teal-400', active);
+  btn.classList.toggle('bg-teal-950/30', active);
+  btn.classList.toggle('text-slate-500', !active);
+  btn.setAttribute('aria-current', active ? 'page' : 'false');
+}
+
+/** Syncs the active highlight on the About sub-nav buttons. */
+function syncAboutSubnav() {
+  _setSubnavBtnActive('about-nav-btn',     currentSectionId === 'section-about');
+  _setSubnavBtnActive('changelog-nav-btn', currentSectionId === 'section-changelog');
 }
 
 /** Enables/disables nav buttons that require loaded data. */
@@ -50,6 +131,40 @@ navButtons.forEach(btn => {
     navigateTo(`section-${btn.dataset.section}`);
     closeSidebar();
   });
+});
+
+document.getElementById('locations-nav-btn')?.addEventListener('click', () => {
+  navigateTo('section-locations');
+  closeSidebar();
+});
+
+document.getElementById('routes-nav-btn')?.addEventListener('click', () => {
+  navigateTo('section-routes');
+  closeSidebar();
+});
+
+document.getElementById('traders-nav-btn')?.addEventListener('click', () => {
+  tradingView = 'traders';
+  navigateTo('section-trading');
+  rerenderTraders();
+  closeSidebar();
+});
+
+document.getElementById('opportunities-nav-btn')?.addEventListener('click', () => {
+  tradingView = 'opportunities';
+  navigateTo('section-trading');
+  rerenderTraders();
+  closeSidebar();
+});
+
+document.getElementById('changelog-nav-btn')?.addEventListener('click', () => {
+  navigateTo('section-changelog');
+  closeSidebar();
+});
+
+document.getElementById('about-nav-btn')?.addEventListener('click', () => {
+  navigateTo('section-about');
+  closeSidebar();
 });
 
 // ── Mobile sidebar toggle ─────────────────────────────────────────────────────
@@ -88,9 +203,309 @@ const drawerSubtitle  = document.getElementById('drawer-subtitle');
 const drawerId        = document.getElementById('drawer-id');
 const drawerBody      = document.getElementById('drawer-body');
 
-const itemDetailRenderer = new ItemDetailRenderer();
-const traderDetailRenderer = new TraderDetailRenderer();
+const itemDetailRenderer    = new ItemDetailRenderer();
+const traderDetailRenderer  = new TraderDetailRenderer();
+const traderLocationEditor  = new TraderLocationEditor();
+const locationsPageRenderer = new LocationsPageRenderer();
+const routesPageRenderer    = new RoutesPageRenderer();
+const compareState    = new CompareState();
+const compareRenderer = new CompareRenderer();
 const mainEl = document.querySelector('main');
+
+// ── Trader location annotations ───────────────────────────────────────────────
+
+/** Cached count of location annotations per traderName for the active scenario. */
+let locationCountMap = new Map();
+
+/** setInterval handle for the Locations page auto-refresh; cleared when navigating away. */
+let locationsRefreshTimer = null;
+
+/**
+ * Returns the active scenario name from the sidebar label, or an empty string
+ * when no scenario is loaded.  All trader-location data is scoped to this key.
+ * @returns {string}
+ */
+function getActiveScenarioName() {
+  return document.getElementById('scenario-name')?.textContent?.trim() ?? '';
+}
+
+/**
+ * Re-fetches the per-trader annotation counts from IndexedDB for the active
+ * scenario and updates `locationCountMap`.  A no-op when no scenario is loaded
+ * or no traders have been parsed yet.
+ * @returns {Promise<void>}
+ */
+async function refreshLocationCounts() {
+  const scenarioName = getActiveScenarioName();
+  if (!scenarioName || !rawTradersCfg?.length) {
+    locationCountMap = new Map();
+    return;
+  }
+  try {
+    locationCountMap = await getAllTraderLocationCounts(scenarioName);
+  } catch (err) {
+    console.warn('[locations] Failed to fetch location counts:', err);
+  }
+}
+
+/**
+ * Computes the potential credit value and stock ranges for a saved location.
+ *
+ * Returns `null` when no items have an explicit sell/buy intent, otherwise:
+ *   sell — credits earned by selling intent='sell' items to the trader
+ *   buy  — credits spent buying  intent='buy'  items from the trader
+ *
+ * Each bucket is `{ lo, hi, qtyLo, qtyHi }` or `null` when not applicable.
+ *
+ * @param {object} loc  Trader-location entry from IndexedDB.
+ * @returns {{ sell: {lo,hi,qtyLo,qtyHi}|null, buy: {lo,hi,qtyLo,qtyHi}|null }|null}
+ */
+function computeTraderValue(loc) {
+  const trader = rawTradersCfg?.find(t => t.name === loc.traderName);
+  if (!trader) return null;
+
+  const sellItems = (loc.keyItems ?? []).filter(i => i.intent === 'sell');
+  const buyItems  = (loc.keyItems ?? []).filter(i => i.intent === 'buy');
+
+  if (!sellItems.length && !buyItems.length) return null;
+
+  // sell: credits earned by selling tagged items TO the trader (trader's buyingItems pricing)
+  let sellLo = 0, sellHi = 0, sellQtyLo = 0, sellQtyHi = 0, hasSell = false;
+  for (const ki of sellItems) {
+    const traderItem = trader.buyingItems?.find(i => i.devName === ki.devName);
+    if (!traderItem) continue;
+    const pRange = estimatePriceRange(traderItem.buyMfRange, getMarketPriceFor(ki.devName));
+    const qRange = parseQtyRange(traderItem.buyQtyRange);
+    if (pRange && qRange) {
+      sellLo    += Math.round(qRange.lo * pRange.lo);
+      sellHi    += Math.round(qRange.hi * pRange.hi);
+      sellQtyLo += qRange.lo;
+      sellQtyHi += qRange.hi;
+      hasSell = true;
+    }
+  }
+
+  // buy: credits spent buying tagged items FROM the trader (trader's sellingItems pricing)
+  let buyLo = 0, buyHi = 0, buyQtyLo = 0, buyQtyHi = 0, hasBuy = false;
+  for (const ki of buyItems) {
+    const traderItem = trader.sellingItems?.find(i => i.devName === ki.devName);
+    if (!traderItem) continue;
+    const pRange = estimatePriceRange(traderItem.sellMfRange, getMarketPriceFor(ki.devName));
+    const qRange = parseQtyRange(traderItem.sellQtyRange);
+    if (pRange && qRange) {
+      buyLo    += Math.round(qRange.lo * pRange.lo);
+      buyHi    += Math.round(qRange.hi * pRange.hi);
+      buyQtyLo += qRange.lo;
+      buyQtyHi += qRange.hi;
+      hasBuy = true;
+    }
+  }
+
+  if (!hasSell && !hasBuy) return null;
+  return {
+    sell: hasSell ? { lo: sellLo, hi: sellHi, qtyLo: sellQtyLo, qtyHi: sellQtyHi } : null,
+    buy:  hasBuy  ? { lo: buyLo,  hi: buyHi,  qtyLo: buyQtyLo,  qtyHi: buyQtyHi  } : null,
+  };
+}
+
+/**
+ * Fetches all trader locations for the active scenario and renders the
+ * Locations overview page.  Also refreshes the sidebar scenario badge.
+ * @returns {Promise<void>}
+ */
+async function renderLocationsPage() {
+  const container = document.getElementById('locations-page-container');
+  if (!container) return;
+
+  const scenarioName = getActiveScenarioName();
+
+  // Update the scenario badge in the locations header.
+  const badge = document.getElementById('locations-scenario-badge');
+  if (badge) {
+    if (scenarioName) {
+      badge.textContent = scenarioName;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  container.innerHTML =
+    `<p class="text-xs text-slate-600 text-center py-20 select-none animate-pulse">Loading…</p>`;
+
+  try {
+    const locations = await getAllTraderLocations(scenarioName);
+    locationsPageRenderer.render(container, {
+      locations,
+      scenarioName,
+      resolveIconUrl,
+      onItemClick: (devName) => {
+        const target = makeTokenSyntheticItem(devName)
+          ?? lastItemResults?.find(i => i.name === devName)
+          ?? rawBlocksCfg?.find(b => b.name === devName);
+        if (target) openDrawer(target);
+      },
+      onOpenTrader: (traderName) => {
+        const trader = rawTradersCfg?.find(t => t.name === traderName);
+        if (!trader) return;
+        openTraderDrawer(trader);
+      },
+      resolveTraderItems: (traderName) => {
+        const trader = rawTradersCfg?.find(t => t.name === traderName);
+        if (!trader) return [];
+        return [
+          ...(trader.sellingItems ?? []).map(i => ({ devName: i.devName, displayName: resolveDisplayName(i.devName) ?? i.devName, source: 'sells' })),
+          ...(trader.buyingItems  ?? []).map(i => ({ devName: i.devName, displayName: resolveDisplayName(i.devName) ?? i.devName, source: 'buys'  })),
+        ].filter((item, idx, arr) => arr.findIndex(x => x.devName === item.devName) === idx);
+      },
+      getTraderValue: computeTraderValue,
+      onEdit: async (entry) => {
+        await updateTraderLocation(entry);
+        await refreshLocationCounts();
+        rerenderTraders();
+        await renderLocationsPage();
+      },
+      onMarkVisited: async (id) => {
+        await markTraderLocationVisited(id);
+        await refreshLocationCounts();
+        rerenderTraders();
+        await renderLocationsPage();
+      },
+      onDelete: async (id) => {
+        await deleteTraderLocation(id);
+        await refreshLocationCounts();
+        rerenderTraders();
+        await renderLocationsPage();
+      },
+    });
+  } catch (err) {
+    console.error('[LocationsPage]', err);
+    container.innerHTML =
+      `<p class="text-xs text-red-400 text-center py-20">Failed to load locations. Check the browser console for details.</p>`;
+    return;
+  }
+
+  // ── Auto-refresh timer ─────────────────────────────────────────────────────
+  // Re-renders every 60 s while the section is active so countdown labels stay live.
+  if (locationsRefreshTimer) clearInterval(locationsRefreshTimer);
+  locationsRefreshTimer = setInterval(() => {
+    if (currentSectionId !== 'section-locations') {
+      clearInterval(locationsRefreshTimer);
+      locationsRefreshTimer = null;
+      return;
+    }
+    // Skip if an edit form is currently open — avoid discarding unsaved input.
+    const locContainer = document.getElementById('locations-page-container');
+    if (locContainer?.querySelector('.loc-form-save')) return;
+    renderLocationsPage();
+  }, 60_000);
+}
+
+/**
+ * Fetches all saved routes for the active scenario and renders the Routes page.
+ * @returns {Promise<void>}
+ */
+async function renderRoutesPage() {
+  const container = document.getElementById('routes-page-container');
+  if (!container) return;
+
+  const scenarioName = getActiveScenarioName();
+
+  // Update the scenario badge in the routes header.
+  const badge = document.getElementById('routes-scenario-badge');
+  if (badge) {
+    if (scenarioName) {
+      badge.textContent = scenarioName;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  // Wire the "New Route" button — only once per render to avoid stacking listeners.
+  const newBtn = document.getElementById('routes-new-btn');
+  if (newBtn) {
+    const fresh = newBtn.cloneNode(true);
+    newBtn.replaceWith(fresh);
+    fresh.addEventListener('click', () => showRouteBuilder(container, scenarioName, null));
+  }
+
+  container.innerHTML =
+    `<p class="text-xs text-slate-600 text-center py-20 select-none animate-pulse">Loading\u2026</p>`;
+
+  try {
+    const [routes, locations] = await Promise.all([
+      getRoutes(scenarioName),
+      getAllTraderLocations(scenarioName),
+    ]);
+
+    routesPageRenderer.render(container, {
+      routes,
+      locations,
+      scenarioName,
+      getTraderValue: computeTraderValue,
+      resolveIconUrl,
+      onEdit: (route) => showRouteBuilder(container, scenarioName, route),
+      onDelete: async (id) => {
+        await deleteRoute(id);
+        await renderRoutesPage();
+      },
+      onTraderClick: (traderName) => {
+        const trader = rawTradersCfg?.find(t => t.name === traderName);
+        if (trader) openTraderDrawer(trader);
+      },
+      onItemClick: (devName) => {
+        const target = makeTokenSyntheticItem(devName)
+          ?? lastItemResults?.find(i => i.name === devName)
+          ?? rawBlocksCfg?.find(b => b.name === devName);
+        if (target) openDrawer(target);
+      },
+    });
+  } catch (err) {
+    console.error('[RoutesPage]', err);
+    container.innerHTML =
+      `<p class="text-xs text-red-400 text-center py-20">Failed to load routes. Check the browser console for details.</p>`;
+  }
+}
+
+/**
+ * Shows the route builder (create or edit) inside the routes page container.
+ * @param {Element} container
+ * @param {string} scenarioName
+ * @param {object|null} routeToEdit
+ */
+async function showRouteBuilder(container, scenarioName, routeToEdit) {
+  container.innerHTML =
+    `<p class="text-xs text-slate-600 text-center py-20 select-none animate-pulse">Loading\u2026</p>`;
+
+  const locations = await getAllTraderLocations(scenarioName);
+
+  routesPageRenderer.showBuilder(container, {
+    locations,
+    scenarioName,
+    getTraderValue: computeTraderValue,
+    resolveIconUrl,
+    onSave: async (route) => {
+      if (routeToEdit) {
+        await updateRoute(route);
+      } else {
+        await addRoute(route);
+      }
+      await renderRoutesPage();
+    },
+    onCancel: () => renderRoutesPage(),
+    onTraderClick: (traderName) => {
+      const trader = rawTradersCfg?.find(t => t.name === traderName);
+      if (trader) openTraderDrawer(trader);
+    },
+    onItemClick: (devName) => {
+      const target = makeTokenSyntheticItem(devName)
+        ?? lastItemResults?.find(i => i.name === devName)
+        ?? rawBlocksCfg?.find(b => b.name === devName);
+      if (target) openDrawer(target);
+    },
+  }, routeToEdit);
+}
 
 // ── Localization ──────────────────────────────────────────────────────────────
 let localizationMap = null;
@@ -274,6 +689,47 @@ function _populateTraderDrawer(trader) {
     resolveIconUrl,
     getMarketPrice: getMarketPriceFor,
   });
+
+  const _scenarioName = getActiveScenarioName();
+  const _traderName   = trader.name ?? '';
+  const _traderItems  = [
+    ...(trader.sellingItems ?? []).map(i => ({ devName: i.devName, displayName: resolveDisplayName(i.devName) ?? i.devName, source: 'sells' })),
+    ...(trader.buyingItems  ?? []).map(i => ({ devName: i.devName, displayName: resolveDisplayName(i.devName) ?? i.devName, source: 'buys'  })),
+  ].filter((item, idx, arr) => arr.findIndex(x => x.devName === item.devName) === idx);
+  traderLocationEditor.render(drawerBody, {
+    traderItems: _traderItems,
+    resolveIconUrl,
+    onItemClick: (devName) => {
+      const target = makeTokenSyntheticItem(devName)
+        ?? lastItemResults?.find(i => i.name === devName)
+        ?? rawBlocksCfg?.find(b => b.name === devName);
+      if (target) {
+        drawerHistory.push(() => _populateTraderDrawer(trader));
+        _populateDrawer(target);
+        drawerBack.classList.remove('hidden');
+      }
+    },
+    getLocations:  () => getTraderLocations(_scenarioName, _traderName),
+    onAdd:         async (entry) => {
+      await addTraderLocation({ ...entry, scenarioName: _scenarioName, traderName: _traderName });
+      await refreshLocationCounts();
+      rerenderTraders();
+      if (currentSectionId === 'section-locations') renderLocationsPage();
+    },
+    onEdit:        async (entry) => {
+      await updateTraderLocation(entry);
+      await refreshLocationCounts();
+      rerenderTraders();
+      if (currentSectionId === 'section-locations') renderLocationsPage();
+    },
+    onDelete:      async (id) => {
+      await deleteTraderLocation(id);
+      await refreshLocationCounts();
+      rerenderTraders();
+      if (currentSectionId === 'section-locations') renderLocationsPage();
+    },
+    onMarkVisited: (id) => markTraderLocationVisited(id),
+  });
 }
 
 function openTraderDrawer(trader) {
@@ -290,7 +746,12 @@ function openTraderDrawer(trader) {
 
 drawerClose.addEventListener('click', closeDrawer);
 drawerBackdrop.addEventListener('click', closeDrawer);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!compareOverlayEl?.classList.contains('hidden')) { closeCompareOverlay(); return; }
+    closeDrawer();
+  }
+});
 
 drawerShare?.addEventListener('click', () => {
   const url = location.href;
@@ -336,6 +797,137 @@ drawerBack.addEventListener('click', () => {
   fn();
   drawerBack.classList.toggle('hidden', drawerHistory.length === 0);
 });
+
+// ── Compare state & overlay ───────────────────────────────────────────────────
+
+const compareBarEl      = document.getElementById('compare-bar');
+const compareBarItemsEl = document.getElementById('compare-bar-items');
+const compareBarOpenBtn = document.getElementById('compare-bar-open');
+const compareBarClearBtn = document.getElementById('compare-bar-clear');
+const compareOverlayEl  = document.getElementById('compare-overlay');
+const compareOverlayBody = document.getElementById('compare-overlay-body');
+const compareOverlayClose = document.getElementById('compare-overlay-close');
+const compareOverlayCount = document.getElementById('compare-overlay-count');
+const compareDiffOnly   = document.getElementById('compare-diff-only');
+
+/** Currently rendered ComparisonResult — null when overlay is closed. */
+let _compareResult = null;
+
+/** Updates the compare bar chips and button state based on the pinned items. */
+function _updateCompareBar(pinnedItems) {
+  if (!pinnedItems.length) {
+    compareBarEl.classList.add('hidden');
+    return;
+  }
+  compareBarEl.classList.remove('hidden');
+
+  compareBarItemsEl.innerHTML = pinnedItems.map(item => {
+    const name = resolveDisplayName(item.name ?? '') || escapeHtml(item.name ?? '');
+    let iconHtml = '';
+    const iconUrl = resolveIconUrl(item.name ?? '');
+    if (iconUrl) {
+      iconHtml = `<img src="${iconUrl}" alt="" class="w-4 h-4 object-contain shrink-0" draggable="false" />`;
+    }
+    return `<div class="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 border border-slate-700 text-xs text-slate-300 max-w-[160px] shrink-0">
+      ${iconHtml}<span class="truncate">${escapeHtml(name)}</span>
+      <button data-bar-remove="${escapeHtml(item.name ?? '')}" class="shrink-0 text-slate-600 hover:text-red-400 transition-colors ml-0.5 leading-none" title="Remove" aria-label="Remove ${escapeHtml(name)} from comparison">&times;</button>
+    </div>`;
+  }).join('');
+
+  compareBarOpenBtn.disabled = pinnedItems.length < 2;
+}
+
+/** Opens the compare overlay and renders the current comparison. */
+function openCompareOverlay() {
+  const pinnedItems = compareState.items;
+  if (pinnedItems.length < 2) return;
+
+  _compareResult = buildComparison(pinnedItems, {
+    templatesCfg:   rawTemplatesCfg,
+    tradersCfg:     rawTradersCfg,
+    getMarketPrice: getMarketPriceFor,
+  });
+
+  compareOverlayCount.textContent = `${pinnedItems.length} items`;
+  compareDiffOnly.checked = false;
+
+  compareRenderer.render(_compareResult, compareOverlayBody, {
+    showDiffsOnly:    false,
+    resolveLocalized: resolveDisplayNameHtml,
+    resolveIconUrl,
+    onRemoveItem: (name) => {
+      compareState.remove(name);
+      if (compareState.count < 2) { closeCompareOverlay(); return; }
+      // Re-build and re-render with the remaining items
+      openCompareOverlay();
+    },
+    onMoveItem: (name, dir) => {
+      compareState.move(name, dir);
+      openCompareOverlay();
+    },
+    onItemClick: (devName) => {
+      const target = lastItemResults?.find(i => i.name === devName)
+        ?? rawBlocksCfg?.find(b => b.name === devName);
+      if (target) { closeCompareOverlay(); openDrawer(target); }
+    },
+  });
+
+  compareOverlayEl.classList.remove('hidden');
+  compareOverlayClose.focus();
+}
+
+/** Closes the compare overlay without clearing the pinned set. */
+function closeCompareOverlay() {
+  compareOverlayEl.classList.add('hidden');
+  _compareResult = null;
+}
+
+// Wire compare bar buttons
+compareBarOpenBtn?.addEventListener('click', openCompareOverlay);
+compareBarClearBtn?.addEventListener('click', () => compareState.clear());
+
+// Wire compare overlay close button
+compareOverlayClose?.addEventListener('click', closeCompareOverlay);
+
+// Wire diff-only toggle
+compareDiffOnly?.addEventListener('change', () => {
+  if (!_compareResult) return;
+  compareRenderer.render(_compareResult, compareOverlayBody, {
+    showDiffsOnly:    compareDiffOnly.checked,
+    resolveLocalized: resolveDisplayNameHtml,
+    resolveIconUrl,
+    onRemoveItem: (name) => {
+      compareState.remove(name);
+      if (compareState.count < 2) { closeCompareOverlay(); return; }
+      openCompareOverlay();
+    },
+    onMoveItem: (name, dir) => {
+      compareState.move(name, dir);
+      openCompareOverlay();
+    },
+    onItemClick: (devName) => {
+      const target = lastItemResults?.find(i => i.name === devName)
+        ?? rawBlocksCfg?.find(b => b.name === devName);
+      if (target) { closeCompareOverlay(); openDrawer(target); }
+    },
+  });
+});
+
+// Wire compare bar remove-chip buttons via delegation
+compareBarItemsEl?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-bar-remove]');
+  if (btn) compareState.remove(btn.dataset.barRemove);
+});
+
+// React to pin state changes
+compareState.onChange((pinnedItems) => {
+  _updateCompareBar(pinnedItems);
+  // Update only the pin-button / ring styles in-place — avoids a full re-render
+  // that would flash skeleton placeholders for every card.
+  itemListRenderer.updatePinStates(itemsListContainer, new Set(pinnedItems.map(i => i.name)));
+});
+
+// ── URL hash helpers ──────────────────────────────────────────────────────────
 
 /**
  * Parses a URL hash string into a plain key→value object.
@@ -425,6 +1017,7 @@ let _npcBuyMinDebounce    = null;
 let tradingView           = 'traders'; // 'traders' | 'opportunities'
 let tradingShow           = 'all';    // 'all' | 'sells' | 'buys'
 let tradingSort           = 'default'; // 'default' | 'max-credit' | 'max-sell-price' | 'max-qty'
+let currentSectionId      = 'section-scenarios';
 
 function updateSortDirBtn() {
   const btn = document.getElementById('sort-dir-btn');
@@ -483,7 +1076,10 @@ function rerenderItems() {
     countEl.textContent = isFiltered ? `${filtered.length} / ${lastItemResults.length}` : '';
     countEl.classList.toggle('hidden', !isFiltered);
   }
-  itemListRenderer.render(filtered, itemsListContainer, openDrawer, resolveDisplayNameHtml, resolveIconUrl);
+  itemListRenderer.render(filtered, itemsListContainer, openDrawer, resolveDisplayNameHtml, resolveIconUrl, {
+    pinnedNames:      new Set(compareState.items.map(i => i.name)),
+    onCompareToggle:  (item) => { compareState.toggle(item); },
+  });
 }
 
 /**
@@ -661,13 +1257,14 @@ function rerenderTraders() {
     resolveIconUrl,
     npcSellMax,
     npcBuyMin,
-    getMarketPrice: getMarketPriceFor,
+    getMarketPrice:   getMarketPriceFor,
     tradingShow,
     onTraderClick: (traderName) => {
       const trader = rawTradersCfg?.find(t => t.name === traderName);
       if (trader) openTraderDrawer(trader);
     },
-    itemSearchQuery: tradingSearch.trim().toLowerCase(),
+    itemSearchQuery:  tradingSearch.trim().toLowerCase(),
+    getLocationCount: (traderName) => locationCountMap.get(traderName) ?? 0,
   });
 }
 
@@ -939,6 +1536,7 @@ async function loadEcfIntoSection(file, sectionEl) {
     updateExportStatus();
   } else if (sectionEl.id === 'section-trading') {
     rawTradersCfg = results;
+    await refreshLocationCounts();
     rerenderTraders();
     updateExportStatus();
   } else {
@@ -1133,15 +1731,6 @@ document.getElementById('trading-npc-buy-min')?.addEventListener('input', (e) =>
   }, 300);
 });
 
-document.querySelectorAll('[data-trading-view]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    tradingView = btn.dataset.tradingView;
-    document.querySelectorAll('[data-trading-view]').forEach(b =>
-      b.classList.toggle('active', b.dataset.tradingView === tradingView));
-    rerenderTraders();
-  });
-});
-
 document.querySelectorAll('[data-trading-show]').forEach(btn => {
   btn.addEventListener('click', () => {
     tradingShow = btn.dataset.tradingShow;
@@ -1318,7 +1907,10 @@ async function applyEmpdbData(data) {
   updateExportStatus();
   closeDrawer();
   if (lastItemResults?.length)  rerenderItems();
-  if (rawTradersCfg?.length)    rerenderTraders();
+  if (rawTradersCfg?.length) {
+    await refreshLocationCounts();
+    rerenderTraders();
+  }
   _tryRestoreFromHash(pendingHash);
 }
 
@@ -1336,6 +1928,187 @@ document.getElementById('empdb-input')?.addEventListener('change', async (e) => 
   }
   // reset so the same file can be re-imported
   e.target.value = '';
+});
+
+// ── Location & Route export / import ────────────────────────
+
+/**
+ * Triggers a file download with the given text content.
+ */
+function _downloadText(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function _getUserDataExportParts() {
+  const scenarioName = getActiveScenarioName();
+  const [locations, routes] = await Promise.all([
+    getAllTraderLocations(scenarioName),
+    getRoutes(scenarioName),
+  ]);
+  return { scenarioName, locations, routes };
+}
+
+document.getElementById('export-user-data-json-btn')?.addEventListener('click', async () => {
+  const { scenarioName, locations, routes } = await _getUserDataExportParts();
+  const date = new Date().toISOString().slice(0, 10);
+  const slug = (scenarioName || 'empyrion').replace(/[^a-zA-Z0-9_-]/g, '-');
+  _downloadText(
+    `${slug}-locations-routes-${date}.json`,
+    buildLocationsRoutesJson(locations, routes, scenarioName),
+    'application/json'
+  );
+});
+
+document.getElementById('export-user-data-csv-btn')?.addEventListener('click', async () => {
+  const { scenarioName, locations, routes } = await _getUserDataExportParts();
+  const date = new Date().toISOString().slice(0, 10);
+  const slug = (scenarioName || 'empyrion').replace(/[^a-zA-Z0-9_-]/g, '-');
+  _downloadText(
+    `${slug}-locations-routes-${date}.csv`,
+    buildLocationsRoutesCsv(locations, routes, scenarioName),
+    'text/csv'
+  );
+});
+
+/**
+ * Imports a locations+routes JSON export into IndexedDB.
+ * Existing records with the same id are overwritten; new records are added.
+ * @param {string} jsonString
+ */
+async function importLocationsRoutesJson(jsonString) {
+  const data = JSON.parse(jsonString);
+  if (
+    !data ||
+    data.version !== 1 ||
+    !Array.isArray(data.locations) ||
+    !Array.isArray(data.routes)
+  ) {
+    throw new Error('Unrecognised format — expected a version 1 locations/routes export.');
+  }
+
+  // Collect unique scenario names present in the file so we can build ID sets.
+  const scenarioNames = [
+    ...new Set([
+      ...data.locations.map(l => l.scenarioName).filter(Boolean),
+      ...data.routes.map(r => r.scenarioName).filter(Boolean),
+    ]),
+  ];
+
+  const existingLocIds   = new Set();
+  const existingRouteIds = new Set();
+
+  await Promise.all(
+    scenarioNames.map(async sn => {
+      const [locs, rts] = await Promise.all([getAllTraderLocations(sn), getRoutes(sn)]);
+      locs.forEach(l => existingLocIds.add(l.id));
+      rts.forEach(r => existingRouteIds.add(r.id));
+    })
+  );
+
+  await Promise.all([
+    ...data.locations.map(loc =>
+      existingLocIds.has(loc.id) ? updateTraderLocation(loc) : addTraderLocation(loc)
+    ),
+    ...data.routes.map(route =>
+      existingRouteIds.has(route.id) ? updateRoute(route) : addRoute(route)
+    ),
+  ]);
+
+  await refreshLocationCounts();
+  rerenderTraders();
+  renderLocationsPage();
+  renderRoutesPage();
+}
+
+document.getElementById('import-user-data-input')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+
+  let jsonString;
+  try {
+    jsonString = await file.text();
+    // Quick parse + validate before checking for existing data
+    const data = JSON.parse(jsonString);
+    if (
+      !data || data.version !== 1 ||
+      !Array.isArray(data.locations) || !Array.isArray(data.routes)
+    ) throw new Error('Unrecognised format — expected a version 1 locations/routes export.');
+
+    // Check if any existing data would be overwritten
+    const scenarioNames = [
+      ...new Set([
+        ...data.locations.map(l => l.scenarioName).filter(Boolean),
+        ...data.routes.map(r => r.scenarioName).filter(Boolean),
+      ]),
+    ];
+
+    const existingLocIds   = new Set();
+    const existingRouteIds = new Set();
+    await Promise.all(
+      scenarioNames.map(async sn => {
+        const [locs, rts] = await Promise.all([getAllTraderLocations(sn), getRoutes(sn)]);
+        locs.forEach(l => existingLocIds.add(l.id));
+        rts.forEach(r => existingRouteIds.add(r.id));
+      })
+    );
+
+    const updatedLocs   = data.locations.filter(l => existingLocIds.has(l.id)).length;
+    const newLocs       = data.locations.length - updatedLocs;
+    const updatedRoutes = data.routes.filter(r => existingRouteIds.has(r.id)).length;
+    const newRoutes     = data.routes.length - updatedRoutes;
+
+    const hasConflicts = updatedLocs > 0 || updatedRoutes > 0;
+
+    if (!hasConflicts) {
+      await importLocationsRoutesJson(jsonString);
+      return;
+    }
+
+    // Show confirmation modal
+    const modal  = document.getElementById('import-confirm-modal');
+    const body   = document.getElementById('import-confirm-body');
+    const okBtn  = document.getElementById('import-confirm-ok');
+    const cancel = document.getElementById('import-confirm-cancel');
+    const backdrop = document.getElementById('import-confirm-backdrop');
+
+    const row = (label, val) =>
+      `<div class="flex items-baseline justify-between gap-4"><span class="text-slate-500">${label}</span><span class="font-semibold text-slate-200 tabular-nums">${val}</span></div>`;
+
+    body.innerHTML =
+      `<p class="mb-2">Your current data has records that match items in this file. Importing will <strong class="text-amber-300">overwrite</strong> those records.</p>` +
+      `<div class="bg-zinc-900/60 border border-zinc-800 rounded-lg px-4 py-3 flex flex-col gap-1 text-[12px]">` +
+        row('Locations to add',    newLocs) +
+        row('Locations to update', updatedLocs) +
+        row('Routes to add',    newRoutes) +
+        row('Routes to update', updatedRoutes) +
+      `</div>`;
+
+    modal.classList.remove('hidden');
+
+    const cleanup = () => modal.classList.add('hidden');
+
+    const onOk = async () => {
+      cleanup();
+      try {
+        await importLocationsRoutesJson(jsonString);
+      } catch (err) {
+        alert(`Failed to import: ${err.message}`);
+      }
+    };
+
+    okBtn.onclick     = onOk;
+    cancel.onclick    = cleanup;
+    backdrop.onclick  = cleanup;
+  } catch (err) {
+    alert(`Failed to import: ${err.message}`);
+  }
 });
 
 // ── Featured scenarios ───────────────────────────────────────

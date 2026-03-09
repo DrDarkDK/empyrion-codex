@@ -118,13 +118,72 @@ html[data-ui-scale="lg"] #section-settings .custom-scrollbar > div { zoom: 1.15;
 html[data-ui-scale="xl"] #section-settings .custom-scrollbar > div { zoom: 1.3; }
 html[data-ui-scale-items="lg"] #items-list-container > div   { zoom: 1.2; }
 html[data-ui-scale-items="xl"] #items-list-container > div   { zoom: 1.4; }
-html[data-ui-scale-trading="lg"] #traders-list-container > div { zoom: 1.5; }
-html[data-ui-scale-trading="xl"] #traders-list-container > div { zoom: 1.85; }
+html[data-ui-scale-trading="lg"] #traders-list-container > div    { zoom: 1.5; }
+html[data-ui-scale-trading="xl"] #traders-list-container > div    { zoom: 1.85; }
+html[data-ui-scale-trading="lg"] #locations-page-container > div  { zoom: 1.5; }
+html[data-ui-scale-trading="xl"] #locations-page-container > div  { zoom: 1.85; }
+html[data-ui-scale-trading="lg"] #routes-page-container > div     { zoom: 1.5; }
+html[data-ui-scale-trading="xl"] #routes-page-container > div     { zoom: 1.85; }
+html[data-ui-scale-trading="lg"] #opportunities-container > div   { zoom: 1.5; }
+html[data-ui-scale-trading="xl"] #opportunities-container > div   { zoom: 1.85; }
+html[data-ui-scale="lg"] #compare-bar                         { zoom: 1.2; }
+html[data-ui-scale="xl"] #compare-bar                         { zoom: 1.4; }
+html[data-ui-scale-items="lg"] #compare-overlay-body          { zoom: 1.2; }
+html[data-ui-scale-items="xl"] #compare-overlay-body          { zoom: 1.4; }
+html[data-ui-scale-items="lg"] #compare-overlay .sticky       { zoom: 1.2; }
+html[data-ui-scale-items="xl"] #compare-overlay .sticky       { zoom: 1.4; }
+
+/* ── Diff-only toggle switch ─────────────────────────────────── */
+/*
+ * Used in the Compare overlay toolbar (desktop+) to replace the plain
+ * browser checkbox with a styled pill toggle.
+ * Relies on the adjacent-sibling selector:
+ *   #compare-diff-only (sr-only) + .diff-toggle-track
+ */
+.diff-toggle-track {
+  position: relative;
+  display: inline-flex;
+  width: 2rem;       /* 32px */
+  height: 1.125rem;  /* 18px */
+  border-radius: 9999px;
+  background-color: #52525b; /* zinc-600 */
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.diff-toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease;
+}
+#compare-diff-only:checked + .diff-toggle-track {
+  background-color: #2563eb; /* blue-600 */
+}
+#compare-diff-only:checked + .diff-toggle-track::after {
+  transform: translateX(14px); /* 32 - 2(left) - 14(knob) - 2(right) = 14px */
+}
+
+/* Raise the scroll-to-top button above the compare bar when it's visible */
+#section-items:has(#compare-bar:not(.hidden)) .scroll-top-btn {
+  bottom: calc(var(--compare-bar-height, 3.5rem) + 0.75rem);
+}
+
+/* Safe-area-aware bottom padding (used by compare bar on mobile) */
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
 
 /* ── Scroll-to-top button ───────────────────────────────────── */
 .scroll-top-btn {
   position: absolute;
-  bottom: 1.5rem;
+  bottom: 1rem;
   right: 2rem;
   z-index: 30;
   width: 2.5rem;

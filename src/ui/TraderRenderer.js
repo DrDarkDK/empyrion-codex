@@ -1,4 +1,4 @@
-import { escapeHtml, estimatePriceRange, parseQtyRange } from './renderUtils.js';
+import { escapeHtml, estimatePriceRange, parseQtyRange, highlightSearchQuery } from './renderUtils.js';
 
 /** Tracks delegated click handlers per container to prevent stacking on re-render. */
 const _traderHandlers = new WeakMap();
@@ -155,7 +155,7 @@ export class TraderRenderer {
     const badgesHtml = [pinBadge, discountBadge].filter(Boolean).join('');
     return (
       `<div class="flex items-start justify-between gap-3 min-w-0">` +
-      `<button data-trader-ref="${escapeHtml(trader.name ?? '')}" class="text-sm font-bold text-white truncate text-left hover:text-amber-400 transition-colors flex-1 min-w-0">${name}</button>` +
+      `<button data-trader-ref="${escapeHtml(trader.name ?? '')}" class="text-sm font-bold text-white truncate text-left hover:text-amber-400 transition-colors flex-1 min-w-0">${highlightSearchQuery(name, itemSearchQuery)}</button>` +
       (badgesHtml ? `<div class="flex items-center gap-1.5 shrink-0">${badgesHtml}</div>` : '') +
       `</div>` +
       `${quoteHtml}${sectionsHtml}`
@@ -183,11 +183,16 @@ export class TraderRenderer {
 
     // Item search filter: only show chips that match the query
     if (itemSearchQuery) {
-      visibleItems = visibleItems.filter(item => {
+      const _visibleItems = visibleItems.filter(item => {
         const html = resolveLocalized ? (resolveLocalized(item.devName) ?? '') : '';
         const plain = html ? html.replace(/<[^>]*>/g, '') : (item.devName ?? '');
         return plain.toLowerCase().includes(itemSearchQuery);
       });
+
+      // If only the trader's name matched the query, and no items matched, then we display all items
+      if (_visibleItems.length !== 0) {
+        visibleItems = _visibleItems;
+      }
     }
 
     // Sort: sell items cheapest first (best player deals); buy items highest total credit first
@@ -207,7 +212,7 @@ export class TraderRenderer {
       });
     }
 
-    if (!visibleItems.length) return '';
+    if (!visibleItems.length && !itemSearchQuery.trim()) return '';
 
     const label    = isSell ? 'Sells to you' : 'Buys from you';
     const labelCls = isSell ? 'text-emerald-600' : 'text-amber-600';

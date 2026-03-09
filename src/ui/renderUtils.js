@@ -109,3 +109,15 @@ export function setContainerClickHandler(el, handler) {
     el.addEventListener('click', handler);
   }
 }
+
+/**
+ * Highlights a search query in a text.
+ * @param {string} text
+ * @param {string} query
+ * @returns {string}
+ */
+export function highlightSearchQuery(text, query) {
+  if (!query.trim()) return text;
+  const q = query.trim().toLowerCase();
+  return text.replace(new RegExp(`(${q})`, 'gi'), '<span class="bg-amber-500/20 text-amber-500">$1</span>');
+}

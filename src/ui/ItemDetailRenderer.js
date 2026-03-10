@@ -301,6 +301,7 @@ export class ItemDetailRenderer {
   /** Crafting recipe section rendered from a Templates.ecf Template object. */
   _recipeSection(template, resolveLocalized, onSlotItemClick, resolveIconUrl, templatesCfg, getMarketPrice = null) {
     if (!template) return '';
+    if (!templatesCfg.get(template?.name ?? '')?.target?.length) return '';
 
     // Craft time / output count / stations rows
     const metaRows = [];

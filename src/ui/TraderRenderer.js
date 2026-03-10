@@ -12,8 +12,30 @@ export class TraderRenderer {
   constructor() {
     /** Blob URLs created during lazy fills — revoked on the next render. */
     this._iconUrls = [];
-    /** Active IntersectionObserver — disconnected on re-render. */
+    /** Active IntersectionObserver for lazy-filling — disconnected on re-render. */
     this._observer = null;
+    /** IntersectionObserver that unloads filled cards scrolled far off-screen. */
+    this._unloadObserver = null;
+  }
+
+  /**
+   * Releases all resources held by the current render (observer, blob URLs, DOM, handler)
+   * and empties the container.  Call this when navigating away from the section to allow
+   * the browser to reclaim the memory used by fully-populated card nodes.
+   * @param {HTMLElement} containerEl
+   */
+  teardown(containerEl) {
+    for (const url of this._iconUrls) URL.revokeObjectURL(url);
+    this._iconUrls = [];
+    this._observer?.disconnect();
+    this._observer = null;
+    this._unloadObserver?.disconnect();
+    this._unloadObserver = null;
+    if (_traderHandlers.has(containerEl)) {
+      containerEl.removeEventListener('click', _traderHandlers.get(containerEl));
+      _traderHandlers.delete(containerEl);
+    }
+    containerEl.innerHTML = '';
   }
 
   /**
@@ -49,6 +71,8 @@ export class TraderRenderer {
     this._iconUrls = [];
     this._observer?.disconnect();
     this._observer = null;
+    this._unloadObserver?.disconnect();
+    this._unloadObserver = null;
 
     if (_traderHandlers.has(containerEl)) {
       containerEl.removeEventListener('click', _traderHandlers.get(containerEl));
@@ -96,6 +120,38 @@ export class TraderRenderer {
       containerEl.addEventListener('click', handler);
     }
 
+    // ── Unload observer ────────────────────────────────────────────────────────
+    // Watches *filled* cards. When a card exits the 1500 px retention zone around
+    // the scroll container it is reset to a skeleton, releasing its DOM subtree.
+    // A 900 px hysteresis gap (1500 − 600) prevents fill↔unload thrashing.
+    this._unloadObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) continue; // still within retention zone
+        const el = /** @type {HTMLElement} */ (entry.target);
+        if (!el.dataset.filled) continue;
+        const idx = Number(el.dataset.traderIdx);
+        const trader = traders[idx];
+        if (!trader) continue;
+        // Lock the card height so the masonry columns don't reflow.
+        const h = el.offsetHeight;
+        if (h > 0) el.style.minHeight = h + 'px';
+        // Restore skeleton.
+        const displayName = resolveLocalized
+          ? (resolveLocalized(trader.name ?? '') || escapeHtml(trader.name || 'Unknown Trader'))
+          : escapeHtml(trader.name ?? 'Unknown Trader');
+        el.innerHTML =
+          `<button data-trader-ref="${escapeHtml(trader.name ?? '')}" class="text-sm font-bold text-white truncate text-left hover:text-amber-400 transition-colors">${displayName}</button>` +
+          `<div class="flex flex-col gap-1.5 mt-1">` +
+          `<div class="h-2 bg-zinc-800/80 rounded-full w-2/3 animate-pulse"></div>` +
+          `<div class="h-2 bg-zinc-800/80 rounded-full w-1/2 animate-pulse"></div>` +
+          `</div>`;
+        delete el.dataset.filled;
+        this._unloadObserver.unobserve(el);
+        this._observer.observe(el);
+      }
+    }, { root: containerEl, rootMargin: '1500px 0px' });
+
+    // ── Fill observer ──────────────────────────────────────────────────────────
     // Lazily fill cards as they scroll near the viewport.
     // root = containerEl (the overflow scroll parent) so rootMargin is relative to it.
     this._observer = new IntersectionObserver((entries) => {
@@ -108,8 +164,12 @@ export class TraderRenderer {
         );
         if (inner === null) {
           el.style.display = 'none';
+          // Hidden cards have no DOM cost — skip unload tracking.
         } else {
           el.innerHTML = inner;
+          el.dataset.filled = '1';
+          el.style.removeProperty('min-height'); // allow natural sizing after refill
+          this._unloadObserver.observe(el);
         }
         this._observer.unobserve(el);
       }

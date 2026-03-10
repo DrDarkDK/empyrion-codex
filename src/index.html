@@ -378,11 +378,10 @@
       </section>
 
       <!-- ── Trading section ── -->
-      <section id="section-trading" class="section-panel hidden flex-1 flex flex-col overflow-hidden relative">
+      <section id="section-trading" class="section-panel hidden flex-1 flex flex-col overflow-x-hidden overflow-y-auto sm:overflow-hidden relative">
 
-        <!-- Persistent search bar + filters + view toggle -->
-        <header class="shrink-0 flex flex-col gap-3 px-4 md:px-8 py-4 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
-          <!-- Row 1: search -->
+        <!-- Search bar: sticky on mobile, static flex child on desktop -->
+        <div class="sticky top-0 sm:static shrink-0 px-4 md:px-8 pt-4 pb-4 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
           <div class="relative w-full group">
             <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -391,46 +390,7 @@
                    class="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3 pl-12 pr-4 text-sm text-slate-200 placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
                    autocomplete="off" spellcheck="false" />
           </div>
-          <!-- Row 2: filters — two logical groups, stack on mobile / inline on sm+ -->
-          <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 gap-2">
-            <!-- Group 1: price filters + show toggle -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <div class="flex items-center gap-2">
-                <span class="text-xs uppercase tracking-widest text-slate-600 select-none">NPC Sell&#x2264;</span>
-                <input id="trading-npc-sell-max" type="number" min="0" step="1" placeholder="any"
-                  class="no-spinner w-20 bg-[#161920] border border-slate-800 rounded-md px-2.5 py-0.5 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-blue-500/50 transition-all" />
-              </div>
-              <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs uppercase tracking-widest text-slate-600 select-none">NPC Buy&#x2265;</span>
-                <input id="trading-npc-buy-min" type="number" min="0" step="1" placeholder="any"
-                  class="no-spinner w-20 bg-[#161920] border border-slate-800 rounded-md px-2.5 py-0.5 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-blue-500/50 transition-all" />
-              </div>
-              <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
-              <div class="flex gap-1">
-                <button class="view-tab-btn active" data-trading-show="all">All</button>
-                <button class="view-tab-btn" data-trading-show="sells">Sells</button>
-                <button class="view-tab-btn" data-trading-show="buys">Buys</button>
-              </div>
-            </div>
-            <!-- Separator: vertical on sm+, horizontal on mobile -->
-            <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
-            <div class="sm:hidden h-px bg-slate-800/60"></div>
-            <!-- Group 2: sort -->
-            <div class="flex items-center gap-3 flex-wrap">
-              <div class="flex items-center gap-2">
-                <span class="text-xs uppercase tracking-widest text-slate-600 select-none">Sort</span>
-                <select id="trading-sort" class="bg-[#161920] border border-slate-800 rounded-md px-2 py-0.5 text-xs text-slate-300 outline-none focus:border-blue-500/50 transition-all cursor-pointer">
-                  <option value="default">Default</option>
-                  <option value="max-credit">Max buy value</option>
-                  <option value="max-sell-price">Max sell price</option>
-                  <option value="max-qty">Max quantity</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </header>
-
+        </div>
         <!-- Section heading + stats -->
         <div class="shrink-0 flex items-end justify-between px-4 md:px-8 pt-4 md:pt-6 pb-4">
           <div>
@@ -445,12 +405,12 @@
         <p class="error-msg text-xs text-red-400 hidden shrink-0 px-8 pb-2"></p>
 
         <!-- Trader cards grid -->
-        <div id="traders-list-container" class="flex-1 min-h-0 overflow-y-auto px-8 pb-8 custom-scrollbar">
+        <div id="traders-list-container" class="sm:flex-1 sm:min-h-0 sm:overflow-y-auto px-8 pb-8 custom-scrollbar">
           <p class="text-xs text-slate-700 text-center py-20 italic select-none">No traders loaded.</p>
         </div>
 
         <!-- Trade opportunities list (hidden by default) -->
-        <div id="opportunities-container" class="hidden flex-1 min-h-0 overflow-y-auto px-8 pb-8 custom-scrollbar">
+        <div id="opportunities-container" class="hidden sm:flex-1 sm:min-h-0 sm:overflow-y-auto px-4 pb-8 sm:px-8 custom-scrollbar">
           <p class="text-xs text-slate-700 text-center py-20 italic select-none">No data loaded.</p>
         </div>
         <button id="trading-scroll-top" class="scroll-top-btn" aria-label="Scroll to top" title="Back to top">
@@ -513,9 +473,7 @@
         <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
           <h2 class="text-2xl font-bold text-white">About</h2>
         </header>
-        <div class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-8">
-
-          <!-- What is this -->
+        <div id="about-scroll" class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-8">
           <div class="flex flex-col gap-3">
             <h2 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">Empyrion Codex</h2>
             <div class="h-0.5 w-14 rounded" style="background:linear-gradient(to right,#3b82f6,#6366f1)"></div>
@@ -595,9 +553,26 @@
         <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
           <h2 class="text-2xl font-bold text-white">Changelog</h2>
         </header>
-        <div class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-5">
+        <div id="changelog-scroll" class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-5">
 
-          <!-- v1.1 — 2026-03-09 -->
+          <!-- v1.2.4 — 2026-03-10 -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+              <span class="text-xs font-bold text-teal-300 bg-teal-950/60 border border-teal-800/50 px-2.5 py-0.5 rounded-full">v1.2.4</span>
+              <span class="text-[11px] text-zinc-500">March 10, 2026</span>
+            </div>
+            <ul class="flex flex-col gap-1.5">
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added new Default Page setting to the Settings page, letting you choose which page should show up when you load the page. Default is the Scenarios page, and fall-back in some cases.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Fixed that the ingredients list for items would be shown, even if the item wasn't craftable in any constructor. Thanks to @Moicky.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Improved searching to allow finding traders by name. Thanks to @Moicky.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Improved the memory usage of the All Items and Trading pages by 20-30% (up to 75% in some cases).</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Fixed that the search bar on the Trade Opportunities page didn't work.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Improved the responsive design on the Trade Opportunities page, so that it looks better on mobile devices.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Made a few minor improvements and bug fixes.</span></li>
+            </ul>
+          </div>
+
+          <!-- v1.2.0 — 2026-03-09 -->
           <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
               <span class="text-xs font-bold text-teal-300 bg-teal-950/60 border border-teal-800/50 px-2.5 py-0.5 rounded-full">v1.2.0</span>
@@ -648,6 +623,71 @@
           <h2 class="text-2xl font-bold text-white">Settings</h2>
         </header>
         <div class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-8">
+
+          <!-- Navigation -->
+          <div class="flex flex-col gap-4">
+            <h2 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">Navigation</h2>
+            <div class="h-0.5 w-14 rounded" style="background:linear-gradient(to right,#3b82f6,#6366f1)"></div>
+
+            <!-- Default page -->
+            <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-5 flex flex-col gap-3" style="border-left-color:#6366f1">
+              <div>
+                <p class="text-sm font-semibold text-white">Default Page</p>
+                <p class="text-xs text-slate-500 mt-0.5">The page shown when the app starts. Data-dependent pages fall back to Scenarios if no scenario has been loaded yet.</p>
+              </div>
+              <div id="default-page-dropdown" class="relative self-start">
+                <button id="default-page-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"
+                        class="flex items-center gap-2 bg-[#0f1115] border border-slate-800 text-slate-300 text-sm rounded-lg px-3 py-2 cursor-pointer hover:border-slate-600 focus:outline-none focus:border-blue-500/40 transition-colors">
+                  <svg id="default-page-trigger-icon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+                  <span id="default-page-trigger-label"></span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-500 shrink-0 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <ul id="default-page-options" role="listbox" aria-label="Default page"
+                    class="hidden absolute top-full left-0 mt-1 z-20 min-w-full bg-[#161920] border border-slate-700 rounded-lg shadow-xl py-1">
+                  <li role="option" data-value="scenarios" class="default-page-option" aria-selected="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="3"/>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                      <path d="M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                      <path d="M8.46 8.46a5 5 0 0 0 0 7.07"/>
+                    </svg>
+                    Scenarios
+                  </li>
+                  <li role="option" data-value="items" class="default-page-option" aria-selected="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    All Items
+                  </li>
+                  <li role="option" data-value="traders" class="default-page-option" aria-selected="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+                    </svg>
+                    Traders
+                  </li>
+                  <li role="option" data-value="opportunities" class="default-page-option" aria-selected="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                    Opportunities
+                  </li>
+                  <li role="option" data-value="locations" class="default-page-option" aria-selected="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    My Locations
+                  </li>
+                  <li role="option" data-value="routes" class="default-page-option" aria-selected="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Routes
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
 
           <!-- Accessibility -->
           <div class="flex flex-col gap-4">

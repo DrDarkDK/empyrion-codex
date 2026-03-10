@@ -49,7 +49,7 @@ function getCategoryColor(category) {
   return '#6366f1';
 }
 
-/** Tracks delegated click handlers per container to prevent stacking on re-render. */
+/** Tracks delegated click and keydown handlers per container to prevent stacking on re-render. */
 const _itemHandlers = new WeakMap();
 
 /**
@@ -61,12 +61,38 @@ export class ItemListRenderer {
   constructor() {
     /** Blob URLs created during lazy fills — revoked on the next render. */
     this._iconUrls = [];
-    /** Active IntersectionObserver — disconnected on re-render. */
+    /** Active IntersectionObserver for lazy-filling — disconnected on re-render. */
     this._observer = null;
+    /** IntersectionObserver that unloads filled cards scrolled far off-screen. */
+    this._unloadObserver = null;
     /** Items array from the most recent render — used by updatePinStates. */
     this._items = [];
     /** compareOptions from the most recent render — updated by updatePinStates. */
     this._compareOptions = null;
+  }
+
+  /**
+   * Releases all resources held by the current render (observer, blob URLs, DOM, handler)
+   * and empties the container.  Call this when navigating away from the section to allow
+   * the browser to reclaim the memory used by fully-populated card nodes.
+   * @param {HTMLElement} containerEl
+   */
+  teardown(containerEl) {
+    for (const url of this._iconUrls) URL.revokeObjectURL(url);
+    this._iconUrls = [];
+    this._observer?.disconnect();
+    this._observer = null;
+    this._unloadObserver?.disconnect();
+    this._unloadObserver = null;
+    if (_itemHandlers.has(containerEl)) {
+      const { click, keydown } = _itemHandlers.get(containerEl);
+      containerEl.removeEventListener('click', click);
+      containerEl.removeEventListener('keydown', keydown);
+      _itemHandlers.delete(containerEl);
+    }
+    this._items = [];
+    this._compareOptions = null;
+    containerEl.innerHTML = '';
   }
 
   /**
@@ -83,9 +109,13 @@ export class ItemListRenderer {
     this._iconUrls = [];
     this._observer?.disconnect();
     this._observer = null;
+    this._unloadObserver?.disconnect();
+    this._unloadObserver = null;
 
     if (_itemHandlers.has(containerEl)) {
-      containerEl.removeEventListener('click', _itemHandlers.get(containerEl));
+      const { click, keydown } = _itemHandlers.get(containerEl);
+      containerEl.removeEventListener('click', click);
+      containerEl.removeEventListener('keydown', keydown);
       _itemHandlers.delete(containerEl);
     }
 
@@ -111,6 +141,15 @@ export class ItemListRenderer {
       const ph = document.createElement('div');
       ph.className = `item-card group relative bg-[#161920] border border-slate-800/40 rounded-2xl p-4 hover:border-slate-700 hover:bg-[#1c2029] cursor-pointer transition-all duration-300 overflow-hidden${pinnedRing}`;
       ph.dataset.index = String(i);
+      ph.setAttribute('tabindex', '0');
+      ph.setAttribute('role', 'button');
+      // Strip any HTML tags/entities from displayName for the plain-text aria-label
+      ph.setAttribute('aria-label', displayName.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'") || rawName);
+      // Let the browser skip rendering/painting this card when off-screen.
+      // contain-intrinsic-size: auto uses the last-measured height once seen,
+      // falling back to 220 px before first render (avoids layout collapse).
+      ph.style.setProperty('content-visibility', 'auto');
+      ph.style.setProperty('contain-intrinsic-size', 'auto 220px');
       ph.innerHTML =
         `<div class="flex flex-col items-center pt-2 pb-3">` +
         `<div class="w-20 h-20 rounded-xl bg-zinc-800/80 animate-pulse"></div>` +
@@ -141,9 +180,54 @@ export class ItemListRenderer {
       if (!card) return;
       onItemClick(items[Number(card.dataset.index)]);
     };
-    _itemHandlers.set(containerEl, handler);
+    // Keyboard handler — activates cards on Enter/Space (pin buttons are native <button>s
+    // and already handle Enter/Space themselves, so we skip them here to avoid double-fires)
+    const keyHandler = (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.target.closest('[data-compare-pin]')) return;
+      const card = e.target.closest('.item-card');
+      if (!card) return;
+      e.preventDefault();
+      onItemClick(items[Number(card.dataset.index)]);
+    };
+    _itemHandlers.set(containerEl, { click: handler, keydown: keyHandler });
     containerEl.addEventListener('click', handler);
+    containerEl.addEventListener('keydown', keyHandler);
 
+    // ── Unload observer ────────────────────────────────────────────────────────
+    // Watches *filled* cards. When a card exits the 1500 px retention zone around
+    // the viewport it is reset to a skeleton, releasing its DOM subtree from memory.
+    // A 900 px hysteresis gap (1500 − 600) prevents fill↔unload thrashing.
+    this._unloadObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) continue; // still within retention zone
+        const el = /** @type {HTMLElement} */ (entry.target);
+        if (!el.dataset.filled) continue;
+        const idx = Number(el.dataset.index);
+        const item = items[idx];
+        if (!item) continue;
+        // Lock the card's height so the grid row doesn't collapse.
+        const h = el.offsetHeight;
+        if (h > 0) el.style.minHeight = h + 'px';
+        // Restore skeleton.
+        const rawName     = item.name ?? 'Unknown';
+        const displayName = getDisplayName ? (getDisplayName(rawName) ?? escapeHtml(rawName)) : escapeHtml(rawName);
+        el.innerHTML =
+          `<div class="flex flex-col items-center pt-2 pb-3">` +
+          `<div class="w-20 h-20 rounded-xl bg-zinc-800/80 animate-pulse"></div>` +
+          `<div class="mt-3 text-center w-full min-w-0">` +
+          `<p class="text-[13px] font-bold text-slate-100 truncate">${displayName}</p>` +
+          `</div></div>` +
+          `<div class="border-t border-slate-800/30 mt-1 pt-2.5">` +
+          `<div class="h-2 w-2/5 bg-zinc-800/80 rounded-full animate-pulse"></div>` +
+          `</div>`;
+        delete el.dataset.filled;
+        this._unloadObserver.unobserve(el);
+        this._observer.observe(el);
+      }
+    }, { root: null, rootMargin: '1500px 0px' });
+
+    // ── Fill observer ──────────────────────────────────────────────────────────
     // Lazily fill cards as they scroll near the viewport.
     // root: null observes relative to the browser viewport, which is correct here
     // since the items grid is nested inside the overflow-scroll parent, not equal to it.
@@ -153,7 +237,10 @@ export class ItemListRenderer {
         const el = /** @type {HTMLElement} */ (entry.target);
         const idx = Number(el.dataset.index);
         el.innerHTML = this._cardInner(items[idx], idx, getDisplayName, getIconUrl, this._compareOptions);
+        el.dataset.filled = '1';
+        el.style.removeProperty('min-height'); // allow natural sizing after refill
         this._observer.unobserve(el);
+        this._unloadObserver.observe(el);
       }
     }, { root: null, rootMargin: '600px 0px' });
 
@@ -176,7 +263,7 @@ export class ItemListRenderer {
     if (!grid) return;
 
     const PINNED_CLS   = 'absolute top-2 left-2 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold bg-blue-600 text-white z-10 before:content-[""] before:absolute before:-inset-3 md:before:content-none';
-    const UNPINNED_CLS = 'absolute top-2 left-2 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 hover:text-blue-400 bg-zinc-800 md:bg-zinc-900/80 border border-slate-500 md:border-slate-700 hover:border-blue-400/60 md:opacity-0 md:group-hover:opacity-100 transition-all z-10 before:content-[""] before:absolute before:-inset-3 md:before:content-none';
+    const UNPINNED_CLS = 'absolute top-2 left-2 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 hover:text-blue-400 bg-zinc-800 md:bg-zinc-900/80 border border-slate-500 md:border-slate-700 hover:border-blue-400/60 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-all z-10 before:content-[""\] before:absolute before:-inset-3 md:before:content-none';
 
     for (const node of grid.children) {
       const el       = /** @type {HTMLElement} */ (node);
@@ -196,6 +283,7 @@ export class ItemListRenderer {
       pinBtn.textContent = isPinned ? '✓' : '';
       pinBtn.title      = isPinned ? 'Remove from comparison' : 'Add to comparison';
       pinBtn.setAttribute('aria-label', isPinned ? 'Remove from comparison' : 'Add to comparison');
+      pinBtn.setAttribute('aria-pressed', String(isPinned));
     }
   }
 
@@ -226,9 +314,9 @@ export class ItemListRenderer {
     const isPinned    = compareOptions?.pinnedNames?.has(rawName) ?? false;
     const pinBtnClass = isPinned
       ? 'absolute top-2 left-2 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold bg-blue-600 text-white z-10 before:content-[""] before:absolute before:-inset-3 md:before:content-none'
-      : 'absolute top-2 left-2 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 hover:text-blue-400 bg-zinc-800 md:bg-zinc-900/80 border border-slate-500 md:border-slate-700 hover:border-blue-400/60 md:opacity-0 md:group-hover:opacity-100 transition-all z-10 before:content-[""] before:absolute before:-inset-3 md:before:content-none';
+      : 'absolute top-2 left-2 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 hover:text-blue-400 bg-zinc-800 md:bg-zinc-900/80 border border-slate-500 md:border-slate-700 hover:border-blue-400/60 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-all z-10 before:content-[""\] before:absolute before:-inset-3 md:before:content-none';
     const pinBtn = compareOptions
-      ? `<button data-compare-pin="${i}" class="${pinBtnClass}" title="${isPinned ? 'Remove from comparison' : 'Add to comparison'}" aria-label="${isPinned ? 'Remove from comparison' : 'Add to comparison'}">${isPinned ? '✓' : ''}</button>`
+      ? `<button data-compare-pin="${i}" class="${pinBtnClass}" title="${isPinned ? 'Remove from comparison' : 'Add to comparison'}" aria-label="${isPinned ? 'Remove from comparison' : 'Add to comparison'}" aria-pressed="${isPinned}">${isPinned ? '✓' : ''}</button>`
       : '';
 
     return (

@@ -80,6 +80,17 @@ export class RoutesPageRenderer {
     const locById   = new Map(locations.map(l => [l.id, l]));
     const locByName = locations; // for the picker drop-down
 
+    // Escape cancels the builder without saving.
+    // stopPropagation prevents the global Escape handler from also firing
+    // (e.g. closing a trader drawer when the builder is open inside it).
+    const escHandler = (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      containerEl.removeEventListener('keydown', escHandler);
+      onCancel();
+    };
+    containerEl.addEventListener('keydown', escHandler);
+
     const render = () => {
       containerEl.innerHTML = '';
 
@@ -222,8 +233,10 @@ export class RoutesPageRenderer {
         };
         saveBtn.disabled = true;
         try {
+          containerEl.removeEventListener('keydown', escHandler);
           await onSave(routeEntry);
         } catch {
+          containerEl.addEventListener('keydown', escHandler);
           saveBtn.disabled = false;
         }
       });
@@ -233,7 +246,10 @@ export class RoutesPageRenderer {
       cancelBtn.textContent = 'Cancel';
       cancelBtn.className =
         'text-xs px-4 py-2 text-slate-500 hover:text-slate-200 transition-colors';
-      cancelBtn.addEventListener('click', onCancel);
+      cancelBtn.addEventListener('click', () => {
+        containerEl.removeEventListener('keydown', escHandler);
+        onCancel();
+      });
 
       actions.appendChild(saveBtn);
       actions.appendChild(cancelBtn);

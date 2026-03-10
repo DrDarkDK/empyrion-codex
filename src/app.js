@@ -52,6 +52,18 @@ function navigateTo(sectionId) {
     locationsRefreshTimer = null;
   }
 
+  // When leaving the Items or Trading sections, tear down their (potentially very large)
+  // DOM trees so the browser can reclaim the memory. They are rebuilt when re-entered.
+  if (currentSectionId !== sectionId) {
+    if (currentSectionId === 'section-items') {
+      itemListRenderer.teardown(itemsListContainer);
+    } else if (currentSectionId === 'section-trading') {
+      traderRenderer.teardown(tradersListContainer);
+      const oppsEl = document.getElementById('opportunities-container');
+      if (oppsEl) oppsEl.innerHTML = '';
+    }
+  }
+
   currentSectionId = sectionId;
 
   navButtons.forEach(b => {
@@ -76,6 +88,8 @@ function navigateTo(sectionId) {
   syncAboutSubnav();
 
   if (sectionId === 'section-scenarios') renderSavedScenarios();
+  if (sectionId === 'section-items')     rerenderItems();
+  if (sectionId === 'section-trading')   rerenderTraders();
   if (sectionId === 'section-locations') renderLocationsPage();
   if (sectionId === 'section-routes')    renderRoutesPage();
 }
@@ -387,6 +401,8 @@ async function renderLocationsPage() {
 
   // ── Auto-refresh timer ─────────────────────────────────────────────────────
   // Re-renders every 60 s while the section is active so countdown labels stay live.
+  // Guard: skip if the user navigated away while the async render was in flight.
+  if (currentSectionId !== 'section-locations') return;
   if (locationsRefreshTimer) clearInterval(locationsRefreshTimer);
   locationsRefreshTimer = setInterval(() => {
     if (currentSectionId !== 'section-locations') {
@@ -1245,6 +1261,11 @@ function rerenderTraders() {
     countEl.textContent = isFiltered ? `${filtered.length} / ${baseTraders.length}` : '';
     countEl.classList.toggle('hidden', !isFiltered);
   }
+  if (filtered.length === 0) {
+    const msg = q ? 'No traders match your search.' : 'No traders found.';
+    tradersListContainer.innerHTML = `<p class="text-xs text-slate-700 text-center py-20 italic select-none">${msg}</p>`;
+    return;
+  }
   const filteredNormalized = filtered.map(normalizeTraderTokens);
   traderRenderer.render(filteredNormalized, tradersListContainer, {
     resolveLocalized: resolveDisplayNameHtml,
@@ -1363,10 +1384,17 @@ function renderOpportunities() {
   const el = document.getElementById('opportunities-container');
   if (!el) return;
 
-  const opps = buildOpportunities();
+  const allOpps = buildOpportunities();
+  const q = tradingSearch.trim().toLowerCase();
+  const opps = q
+    ? allOpps.filter(opp => (resolveDisplayName(opp.devName) ?? opp.devName ?? '').toLowerCase().includes(q))
+    : allOpps;
 
   if (!opps.length) {
-    el.innerHTML = '<p class="text-xs text-slate-700 text-center py-20 italic select-none">No tradeable items found. Make sure at least one trader buys and sells the same item.</p>';
+    const msg = q
+      ? 'No items match your search.'
+      : 'No tradeable items found. Make sure at least one trader buys and sells the same item.';
+    el.innerHTML = `<p class="text-xs text-slate-700 text-center py-20 italic select-none">${msg}</p>`;
     return;
   }
 
@@ -1378,7 +1406,7 @@ function renderOpportunities() {
     return hasQty ? cr : cr + '\u2009*';
   };
 
-  const rows = opps.map(opp => {
+  const rendered = opps.map(opp => {
     const displayName = resolveDisplayNameHtml(opp.devName) || escapeHtml(opp.devName);
     const hasFullPair = opp.bestQty != null;
     const profitCls   = opp.estProfit == null ? 'text-slate-500'
@@ -1396,31 +1424,51 @@ function renderOpportunities() {
     }).join(', ');
     const qtyStr = hasFullPair ? opp.bestQty.toLocaleString() : '\u2014';
 
-    return `<tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
-  <td class="py-2 px-4 text-xs">
+    return {
+      mobile: `<div class="sm:hidden border-b border-zinc-800/50 py-3 hover:bg-zinc-800/20 transition-colors">
+  <button data-opp-item="${escapeHtml(opp.devName)}" class="text-blue-400 hover:text-blue-300 hover:underline text-left transition-colors text-xs">${displayName}</button>
+  <div class="mt-1.5 ml-3 grid grid-cols-2 gap-y-1">
+    <span class="text-[10px] text-slate-500 uppercase tracking-wide">Buy from</span>
+    <span class="text-xs text-slate-300 text-right" title="${sellerTips}">${fmtPrice(opp.bestBuyLo)}</span>
+    <span class="text-[10px] text-slate-500 uppercase tracking-wide">Sell to</span>
+    <span class="text-xs text-slate-300 text-right" title="${buyerTips}">${fmtPrice(opp.bestSellHi)}</span>
+    <span class="text-[10px] text-amber-800 uppercase tracking-wide">Vol.</span>
+    <span class="text-xs text-amber-600 text-right tabular-nums">${escapeHtml(qtyStr)}</span>
+    <span class="text-[10px] text-slate-500 uppercase tracking-wide">Est. profit</span>
+    <span class="text-xs text-right tabular-nums ${profitCls}">${fmtProfit(opp.estProfit, hasFullPair)}</span>
+  </div>
+</div>`,
+      table: `<tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+  <td class="py-2 px-2 sm:px-4 text-xs">
     <button data-opp-item="${escapeHtml(opp.devName)}" class="text-blue-400 hover:text-blue-300 hover:underline text-left transition-colors">${displayName}</button>
   </td>
-  <td class="py-2 px-4 text-xs text-slate-300 text-right" title="${sellerTips}">${fmtPrice(opp.bestBuyLo)}</td>
-  <td class="py-2 px-4 text-xs text-slate-300 text-right" title="${buyerTips}">${fmtPrice(opp.bestSellHi)}</td>
-  <td class="py-2 px-4 text-xs text-amber-600 text-right tabular-nums">${escapeHtml(qtyStr)}</td>
-  <td class="py-2 px-4 text-xs text-right tabular-nums ${profitCls}">${fmtProfit(opp.estProfit, hasFullPair)}</td>
-</tr>`;
-  }).join('');
+  <td class="py-2 px-2 sm:px-4 text-xs text-slate-300 text-right" title="${sellerTips}">${fmtPrice(opp.bestBuyLo)}</td>
+  <td class="py-2 px-2 sm:px-4 text-xs text-slate-300 text-right" title="${buyerTips}">${fmtPrice(opp.bestSellHi)}</td>
+  <td class="py-2 px-2 sm:px-4 text-xs text-amber-600 text-right tabular-nums">${escapeHtml(qtyStr)}</td>
+  <td class="py-2 px-2 sm:px-4 text-xs text-right tabular-nums ${profitCls}">${fmtProfit(opp.estProfit, hasFullPair)}</td>
+</tr>`
+    };
+  });
+  const mobileRows = rendered.map(r => r.mobile).join('');
+  const tableRows  = rendered.map(r => r.table).join('');
 
   el.innerHTML = `<div class="max-w-3xl">
-<p class="text-[11px] text-slate-600 mb-3 px-1">Items tradeable between different traders. Profit = tradable quantity &times; (best sell price &minus; best buy price), using the (seller, buyer) pair that maximises total earnings. Hover a price to see which traders and their stock. Prices use market value where available. * = per-unit estimate only (qty unavailable).</p>
+<p class="text-[11px] text-slate-500 mb-3 px-1">Items tradeable between different traders. Profit = tradable quantity &times; (best sell price &minus; best buy price), using the (seller, buyer) pair that maximises total earnings. Hover a price to see which traders and their stock. Prices use market value where available. * = per-unit estimate only (qty unavailable).</p>
+<div class="sm:hidden">${mobileRows}</div>
+<div class="hidden sm:block">
 <table class="w-full border-collapse">
   <thead>
     <tr class="border-b border-zinc-700">
-      <th class="py-2 px-4 text-[10px] text-slate-500 uppercase tracking-wide text-left font-semibold">Item</th>
-      <th class="py-2 px-4 text-[10px] text-slate-500 uppercase tracking-wide text-right font-semibold">Best buy from</th>
-      <th class="py-2 px-4 text-[10px] text-slate-500 uppercase tracking-wide text-right font-semibold">Best sell to</th>
-      <th class="py-2 px-4 text-[10px] text-amber-800 uppercase tracking-wide text-right font-semibold">Vol.</th>
-      <th class="py-2 px-4 text-[10px] text-slate-500 uppercase tracking-wide text-right font-semibold">Est. total profit</th>
+      <th class="py-2 px-2 sm:px-4 text-[10px] text-slate-500 uppercase tracking-wide text-left font-semibold">Item</th>
+      <th class="py-2 px-2 sm:px-4 text-[10px] text-slate-500 uppercase tracking-wide text-right font-semibold">Best buy from</th>
+      <th class="py-2 px-2 sm:px-4 text-[10px] text-slate-500 uppercase tracking-wide text-right font-semibold">Best sell to</th>
+      <th class="py-2 px-2 sm:px-4 text-[10px] text-amber-800 uppercase tracking-wide text-right font-semibold">Vol.</th>
+      <th class="py-2 px-2 sm:px-4 text-[10px] text-slate-500 uppercase tracking-wide text-right font-semibold">Est. total profit</th>
     </tr>
   </thead>
-  <tbody>${rows}</tbody>
+  <tbody>${tableRows}</tbody>
 </table>
+</div>
 </div>`;
 }
 
@@ -1713,36 +1761,6 @@ document.getElementById('trading-search')?.addEventListener('input', (e) => {
     tradingSearch = e.target.value;
     rerenderTraders();
   }, 150);
-});
-
-document.getElementById('trading-npc-sell-max')?.addEventListener('input', (e) => {
-  clearTimeout(_npcSellMaxDebounce);
-  _npcSellMaxDebounce = setTimeout(() => {
-    npcSellMax = Number(e.target.value) || 0;
-    rerenderTraders();
-  }, 300);
-});
-
-document.getElementById('trading-npc-buy-min')?.addEventListener('input', (e) => {
-  clearTimeout(_npcBuyMinDebounce);
-  _npcBuyMinDebounce = setTimeout(() => {
-    npcBuyMin = Number(e.target.value) || 0;
-    rerenderTraders();
-  }, 300);
-});
-
-document.querySelectorAll('[data-trading-show]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    tradingShow = btn.dataset.tradingShow;
-    document.querySelectorAll('[data-trading-show]').forEach(b =>
-      b.classList.toggle('active', b.dataset.tradingShow === tradingShow));
-    rerenderTraders();
-  });
-});
-
-document.getElementById('trading-sort')?.addEventListener('change', e => {
-  tradingSort = /** @type {HTMLSelectElement} */ (e.target).value;
-  rerenderTraders();
 });
 
 // Wire delegated click for opportunities table (once, container lives forever)
@@ -2226,12 +2244,12 @@ document.getElementById('featured-scenarios-list')?.addEventListener('click', as
   }
 });
 
-fetchAndRenderFeaturedScenarios();
+const _featuredLoadPromise = fetchAndRenderFeaturedScenarios();
 
 // ── Scroll-to-top buttons ─────────────────────────────────────────────────────
 [
   { btn: 'items-scroll-top',   containers: ['items-list-container'] },
-  { btn: 'trading-scroll-top', containers: ['traders-list-container', 'opportunities-container'] },
+  { btn: 'trading-scroll-top', containers: ['traders-list-container', 'opportunities-container', 'section-trading'] },
 ].forEach(({ btn, containers }) => {
   const btnEl = document.getElementById(btn);
   if (!btnEl) return;
@@ -2242,7 +2260,9 @@ fetchAndRenderFeaturedScenarios();
   };
   containerEls.forEach(el => el.addEventListener('scroll', update, { passive: true }));
   btnEl.addEventListener('click', () => {
-    const active = containerEls.find(el => !el.classList.contains('hidden')) ?? containerEls[0];
+    const active = containerEls.find(el => el.scrollTop > 0)
+      ?? containerEls.find(el => !el.classList.contains('hidden'))
+      ?? containerEls[0];
     active.scrollTo({ top: 0, behavior: 'smooth' });
   });
 });
@@ -2324,6 +2344,18 @@ function applySettings(s) {
   document.querySelectorAll('#ui-scale-trading-btns .settings-scale-btn').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.scale === scaleTrading)
   );
+
+  const defaultPage = s.defaultPage ?? 'scenarios';
+  document.querySelectorAll('#default-page-options [role="option"]').forEach(opt => {
+    opt.setAttribute('aria-selected', opt.dataset.value === defaultPage);
+  });
+  const selectedOpt = document.querySelector(`#default-page-options [data-value="${defaultPage}"]`);
+  if (selectedOpt) {
+    const triggerIcon  = document.getElementById('default-page-trigger-icon');
+    const triggerLabel = document.getElementById('default-page-trigger-label');
+    if (triggerIcon)  triggerIcon.innerHTML  = selectedOpt.querySelector('svg')?.innerHTML ?? '';
+    if (triggerLabel) triggerLabel.textContent = selectedOpt.textContent.trim();
+  }
 }
 
 applySettings(_readSettings());
@@ -2355,18 +2387,79 @@ document.getElementById('ui-scale-trading-btns')?.addEventListener('click', (e) 
   applySettings(s);
 });
 
-// On startup: auto-load the most recently saved scenario if one exists,
-// navigating to All Items; otherwise start on the Scenarios page.
+(function () {
+  const trigger = document.getElementById('default-page-trigger');
+  const optionsList = document.getElementById('default-page-options');
+  if (!trigger || !optionsList) return;
+
+  function openDropdown() {
+    optionsList.classList.remove('hidden');
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+  function closeDropdown() {
+    optionsList.classList.add('hidden');
+    trigger.setAttribute('aria-expanded', 'false');
+  }
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    optionsList.classList.contains('hidden') ? openDropdown() : closeDropdown();
+  });
+
+  optionsList.addEventListener('click', (e) => {
+    const opt = e.target.closest('[role="option"][data-value]');
+    if (!opt) return;
+    const s = _readSettings();
+    s.defaultPage = opt.dataset.value;
+    _writeSettings(s);
+    applySettings(s);
+    closeDropdown();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!document.getElementById('default-page-dropdown')?.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+})();
+
+/**
+ * Navigates to the page the user has chosen as their default, as stored in
+ * settings. Data-gated pages (items, trading) silently do nothing if no
+ * scenario is currently loaded — the caller is responsible for ensuring a
+ * baseline page is already visible before calling this.
+ */
+function navigateToDefaultPage() {
+  const page = _readSettings().defaultPage ?? 'scenarios';
+  if (page === 'traders') {
+    tradingView = 'traders';
+    navigateTo('section-trading');
+  } else if (page === 'opportunities') {
+    tradingView = 'opportunities';
+    navigateTo('section-trading');
+  } else {
+    navigateTo(`section-${page}`);
+  }
+}
+
+// On startup: auto-load the most recently saved scenario if one exists, wait
+// for any featured scenario to finish loading too, then navigate to the
+// user's chosen default page.
 (async () => {
   updateNavState();
   navigateTo('section-scenarios');
   try {
     const scenarios = await db.listScenarios();
-    if (!scenarios.length) return;
-    scenarios.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
-    await applyEmpdbData(scenarios[0].data);
+    if (scenarios.length) {
+      scenarios.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+      await applyEmpdbData(scenarios[0].data);
+    }
   } catch (err) {
     console.warn('Could not auto-load last scenario:', err);
   }
+  // Wait for any featured scenario to finish loading (network fetch) before
+  // navigating, so data-gated nav buttons are enabled by the time we arrive.
+  await _featuredLoadPromise;
+  navigateToDefaultPage();
 })();
 

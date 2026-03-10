@@ -13,9 +13,18 @@ const STORE       = 'scenarios';
 const LOC_STORE   = 'trader-locations';
 const ROUTE_STORE = 'routes';
 
+/**
+ * Cached connection promise — reused across all callers so only one
+ * IDBDatabase object is ever open at a time.  Reset to null whenever the
+ * connection is closed (version upgrade from another tab, or an error).
+ * @type {Promise<IDBDatabase>|null}
+ */
+let _dbPromise = null;
+
 /** @returns {Promise<IDBDatabase>} */
 function openDB() {
-  return new Promise((resolve, reject) => {
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = (e) => {
       const db = /** @type {IDBDatabase} */ (e.target.result);
@@ -40,9 +49,16 @@ function openDB() {
         routeStore.createIndex('by_scenario', 'scenarioName', { unique: false });
       }
     };
-    req.onsuccess = (e) => resolve(/** @type {IDBDatabase} */ (e.target.result));
-    req.onerror   = (e) => reject(e.target.error);
+    req.onsuccess = (e) => {
+      const db = /** @type {IDBDatabase} */ (e.target.result);
+      // If another tab opens a newer version, close gracefully so the upgrade
+      // can proceed and reset the cached promise so the next call reconnects.
+      db.onversionchange = () => { db.close(); _dbPromise = null; };
+      resolve(db);
+    };
+    req.onerror = (e) => { _dbPromise = null; reject(e.target.error); };
   });
+  return _dbPromise;
 }
 
 /**

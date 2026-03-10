@@ -1,23 +1,51 @@
 # Empyrion Codex
 
-A community-made browser tool for exploring scenario data from [Empyrion - Galactic Survival Survival](https://store.steampowered.com/app/383120/Empyrion__Galactic_Survival/). Look up any item, block, or trader across any scenario — with no installation and no tracking.
+A community-made browser tool for exploring scenario data from [Empyrion - Galactic Survival](https://store.steampowered.com/app/383120/Empyrion__Galactic_Survival/). Look up any item, block, or trader across any scenario — with no installation and no tracking.
+
+The Empyrion Codex can be viewed at https://empyrion-codex.com, and will make it easy for you to plan your gameplay efficiently. You can look up specific items for a quick overview of the most important details, find the most profitable traders, track their locations, and plan your routes. If you're trying to decide between two blocks or devices, you can easily compare them and find the one that best fits your needs.
 
 Everything runs entirely in your browser. Your files never leave your device.
 
-> **Disclaimer:** Empyrion Codex is an independent, community-made tool and is not affiliated with, endorsed by, or in any way officially connected to Eleon Game Studios or the Empyrion - Galactic Survival Survival game.
+> **Disclaimer:** Empyrion Codex is an independent, community-made tool and is not affiliated with, endorsed by, or in any way officially connected to Eleon Game Studios or the Empyrion - Galactic Survival game.
+
+---
+
+![A view of some items inside the tool, showing various devices.](images/preview.png)
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Loading data](#loading-data)
+- [Project structure](#project-structure)
+- [Tech stack](#tech-stack)
+- [Accessibility](#accessibility)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgements](#acknowledgements)
 
 ---
 
 ## Features
 
-- **Browse items & blocks** — search by name or description, filter by category and vessel type, sort by ID, name, or price
+- **Browse items & blocks** — search by name, category, or stats; filter by vessel type (BA / HV / SV / CV) and category; sort by ID, name, or market price; filter by minimum price
+- **Item comparison** — pin up to 4 items and compare them side-by-side in a full-screen overlay, with differing rows highlighted
+- **Shareable links** — copy a direct link to any item; the URL auto-opens that item's detail drawer on load
 - **Browse traders** — see what each NPC sells and buys, with estimated price ranges and stock quantities
 - **Trade opportunities** — find items that one trader sells and another buys, sorted by estimated profit
-- **Crafting recipes** — view full ingredient lists with optional ingredient flattening and materials cost estimates
-- **Localization** — loads display names and descriptions from `Localization.csv`
-- **Item icons** — resolved automatically when loading a scenario folder
+- **Trader location tracking** — save trader locations with POI, playfield, and restock interval; live countdown timers show when a trader is ready to visit again
+- **Trade route planning** — build named routes from your saved locations, with per-stop and total profit estimates
+- **Export user data** — export your saved locations and routes as re-importable JSON or human-readable CSV
+- **Crafting recipes** — view full ingredient lists broken down by constructor type, with links to ingredient items
+- **Localization** — loads display names and rich-text descriptions from `Localization.csv`, including in-game color formatting
+- **Item icons** — resolved automatically when loading a scenario folder, or bundled into `.empcdx` exports
+- **Featured scenarios** — load specific server-stored scenarios with a single click — no local files needed
 - **Scenario import/export** — package all loaded data into a single `.empcdx` file for instant reloading without the original ECF files
-- **Saved scenarios** — recent scenarios are cached in your browser's IndexedDB automatically
+- **Saved scenarios** — recently loaded scenarios are cached in your browser's IndexedDB automatically
+- **Mobile-friendly** — fully responsive layout with a collapsible sidebar for phones and tablets
+- **Accessible** — high-contrast dark theme, adjustable UI scale in Settings, and keyboard navigation throughout
 - **No backend, no runtime dependencies** — once built, it's a static web app; open `index.html` in any modern browser and go
 
 ---
@@ -77,7 +105,7 @@ Use the individual upload buttons to load one or more ECF files and/or a Localiz
 
 ### Option C — Import a `.empcdx` file
 
-If you or someone else previously exported data via the **Export** button, you can load the resulting `.empcdx` file directly to restore all data at once, without needing the original ECF files.
+If you or someone else previously exported data via the **Export** button, you can load the resulting `.empcdx` file directly to restore all data at once, without needing the original ECF files. A few scenarios ship pre-bundled with the app and can be loaded directly from the Scenarios page with one click.
 
 ---
 
@@ -85,36 +113,46 @@ If you or someone else previously exported data via the **Export** button, you c
 
 ```
 src/
-├── app.js                    # Application entry point — wiring, state, UI orchestration
-├── db.js                     # Lightweight IndexedDB wrapper for saved scenarios
-├── index.html                # Single-page shell
-├── input.css                 # Tailwind CSS entry point
+├── app.js                          # Application entry point — wiring, state, UI orchestration
+├── db.js                           # IndexedDB wrapper (saved scenarios, locations, routes)
+├── index.html                      # Single-page shell
+├── input.css                       # Tailwind CSS entry point
 ├── parsers/
-│   ├── BaseConfigParser.js   # Abstract base with Template Method pattern for ECF parsing
+│   ├── BaseConfigParser.js         # Abstract base with Template Method pattern for ECF parsing
 │   ├── BlocksConfigParser.js
 │   ├── ItemsConfigParser.js
 │   ├── LocalizationParser.js
-│   ├── ParserFactory.js
+│   ├── ParserFactory.js            # Maps ECF filenames to the correct parser class
 │   ├── TemplatesConfigParser.js
 │   ├── TokenConfigParser.js
 │   ├── TraderNPCConfigParser.js
 │   ├── ecf/
-│   │   ├── EcfBlock.js       # Parsed ECF block node
-│   │   ├── EcfParser.js      # Low-level ECF tokeniser/parser
-│   │   └── EcfProperty.js    # Key/value property on a block
+│   │   ├── EcfBlock.js             # Parsed ECF block node
+│   │   ├── EcfParser.js            # Low-level ECF tokeniser/parser
+│   │   └── EcfProperty.js          # Key/value property on a block
 │   └── models/
 │       ├── Block.js
 │       ├── Item.js
 │       ├── Template.js
 │       ├── Token.js
 │       └── TraderNPC.js
+├── scenarios/
+│   ├── manifest.json               # Index of pre-bundled scenario files
 └── ui/
-    ├── categoryIcons.js      # SVG icon map by item category
-    ├── ItemDetailRenderer.js # Detail drawer for items/blocks
-    ├── ItemListRenderer.js   # Items grid
-    ├── renderUtils.js        # Shared escaping, formatting, and click-handler utilities
-    ├── TraderDetailRenderer.js
-    └── TraderRenderer.js
+    ├── buildLocationForm.js        # Inline add/edit form for trader locations
+    ├── categoryIcons.js            # SVG icon map by item category
+    ├── CompareBuilder.js           # Pure data logic for aligning and diffing item stats
+    ├── CompareRenderer.js          # Renders the full-screen item comparison overlay
+    ├── CompareState.js             # Observable state container for pinned items (max 4)
+    ├── exportCodex.js              # Exports locations and routes to JSON or CSV
+    ├── ItemDetailRenderer.js       # Detail drawer for items and blocks
+    ├── ItemListRenderer.js         # Items grid with lazy rendering and virtual unload
+    ├── LocationsPageRenderer.js    # Renders the My Locations page
+    ├── renderUtils.js              # Shared escaping, formatting, and click-handler utilities
+    ├── RoutesPageRenderer.js       # Renders the Routes page and the route builder
+    ├── TraderDetailRenderer.js     # Detail drawer for traders
+    ├── TraderLocationEditor.js     # Inline location editor embedded in the trader drawer
+    └── TraderRenderer.js           # Trader cards grid with lazy rendering and virtual unload
 ```
 
 ---
@@ -128,6 +166,16 @@ src/
 | Persistence | Browser IndexedDB |
 | Build | Tailwind CLI only |
 | Runtime dependencies | None |
+
+---
+
+## Accessibility
+
+Empyrion Codex is built with accessibility in mind:
+
+- **Contrast** — the dark theme uses high-contrast text throughout, so content stays readable without straining your eyes during long sessions.
+- **UI scale** — the Settings page lets you scale the interface up or down to suit your display and preference.
+- **Keyboard navigation** — the app is navigable via the keyboard (Tab, Enter, Escape).
 
 ---
 

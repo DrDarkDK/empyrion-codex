@@ -254,6 +254,12 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
 
   cancelBtn.addEventListener('click', () => onCancel());
 
+  // Escape also cancels. stopPropagation prevents a parent drawer Escape
+  // handler from closing the whole drawer while the form is open inside it.
+  container.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); onCancel(); }
+  });
+
   saveBtn.addEventListener('click', async () => {
     if (saveBtn.disabled) return;
     saveBtn.disabled    = true;

@@ -158,8 +158,11 @@ export class TraderLocationEditor {
 
     // ── Auto-refresh timer ────────────────────────────────────────────────────
     // Fires every 60 s; skipped if a form is open to avoid discarding input.
-    const _ticker = setInterval(() => {
-      if (!section.isConnected) { clearInterval(_ticker); return; }
+    // Cancel any previously-registered ticker before installing a new one so
+    // that multiple _draw() calls do not accumulate parallel intervals.
+    if (section._ticker != null) clearInterval(section._ticker);
+    section._ticker = setInterval(() => {
+      if (!section.isConnected) { clearInterval(section._ticker); section._ticker = null; return; }
       if (section.querySelector('.loc-form-save')) return; // form open, skip
       refresh();
     }, 60_000);

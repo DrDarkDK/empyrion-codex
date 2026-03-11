@@ -1,6 +1,6 @@
 # Empyrion Codex
 
-A community-made browser tool for exploring scenario data from [Empyrion - Galactic Survival](https://store.steampowered.com/app/383120/Empyrion__Galactic_Survival/). Look up any item, block, or trader across any scenario — with no installation and no tracking.
+A community-made browser tool for exploring scenario data from [Empyrion - Galactic Survival](https://store.steampowered.com/app/383120/Empyrion__Galactic_Survival/). Look up any item, block, or trader across any scenario — with no installation required.
 
 The Empyrion Codex can be viewed at https://empyrion-codex.com, and will make it easy for you to plan your gameplay efficiently. You can look up specific items for a quick overview of the most important details, find the most profitable traders, track their locations, and plan your routes. If you're trying to decide between two blocks or devices, you can easily compare them and find the one that best fits your needs.
 
@@ -118,7 +118,7 @@ Two files are intentionally excluded from the repository because they contain de
 
 ### `src/parserConfig.json`
 
-Controls what the parsers load and how the Weapons page is configured (column groups, tier percentile thresholds, blocked properties). Copy `src/parserConfig.example.json` from the repository and adjust to taste.
+Controls what the parsers load, how the Weapons page is configured (column groups, tier percentile thresholds, blocked properties), and the Plausible Analytics domain. Copy `src/parserConfig.example.json` from the repository and adjust to taste. Set `analytics.domain` to your site's hostname, or leave it empty to disable analytics.
 
 ### `src/scenarios/manifest.json`
 
@@ -197,7 +197,7 @@ src/
 | Styling | [Tailwind CSS v4](https://tailwindcss.com/) |
 | Persistence | Browser IndexedDB |
 | Build | Tailwind CLI only |
-| Runtime dependencies | None |
+| Runtime dependencies | [Plausible Analytics tracker](https://github.com/plausible/plausible-tracker) (loaded via CDN at runtime; opt-out supported) |
 
 ---
 

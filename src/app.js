@@ -1,5 +1,6 @@
 import { ParserFactory } from './parsers/ParserFactory.js';
 import { LocalizationParser, stripFormatting, formatRichText } from './parsers/LocalizationParser.js';
+import { initAnalytics, trackPageView, trackEvent, setAnalyticsEnabled } from './analytics.js';
 import { TemplatesConfigParser } from './parsers/TemplatesConfigParser.js';
 import { ItemListRenderer } from './ui/ItemListRenderer.js';
 import { ItemDetailRenderer } from './ui/ItemDetailRenderer.js';
@@ -116,6 +117,20 @@ function navigateTo(sectionId) {
   if (sectionId === 'section-locations') renderLocationsPage();
   if (sectionId === 'section-routes')    renderRoutesPage();
   if (sectionId === 'section-weapons')   rerenderWeapons();
+
+  // Track virtual page view (SPA — only one HTML file).
+  const _vpMap = {
+    'section-items':     'items',
+    'section-weapons':   weaponsView === 'lookup' ? 'weapons/lookup' : 'weapons/matrix',
+    'section-trading':   tradingView === 'opportunities' ? 'trading/opportunities' : 'trading/traders',
+    'section-locations': 'trading/locations',
+    'section-routes':    'trading/routes',
+    'section-scenarios': 'scenarios',
+    'section-about':     'about',
+    'section-changelog': 'changelog',
+    'section-settings':  'settings',
+  };
+  trackPageView(_vpMap[sectionId] ?? sectionId.replace('section-', ''));
 }
 
 /**
@@ -2471,6 +2486,7 @@ document.getElementById('featured-scenarios-list')?.addEventListener('click', as
     activeWeaponsSupported = entry.weaponsSupported !== false;
     weaponsPageRenderer.setConfig(_buildWeaponsConfig(entry));
     await applyEmpdbData(data);
+    trackEvent('Scenario Download', { name: entry.name ?? '' });
     _updateFeaturedButtons();
   } catch (err) {
     alert(`Failed to load "${escapeHtml(entry.name ?? '')}": ${err.message}`);
@@ -2565,6 +2581,11 @@ function _writeSettings(s) {
 }
 
 function applySettings(s) {
+  const analyticsEnabled = s.analyticsEnabled !== false;
+  setAnalyticsEnabled(analyticsEnabled);
+  const analyticsToggle = document.getElementById('analytics-toggle');
+  if (analyticsToggle) analyticsToggle.checked = analyticsEnabled;
+
   const scale        = s.uiScale        ?? 'normal';
   const scaleItems   = s.uiScaleItems   ?? 'normal';
   const scaleTrading = s.uiScaleTrading ?? 'normal';
@@ -2596,7 +2617,15 @@ function applySettings(s) {
   }
 }
 
+initAnalytics();
 applySettings(_readSettings());
+
+document.getElementById('analytics-toggle')?.addEventListener('change', (e) => {
+  const s = _readSettings();
+  s.analyticsEnabled = e.target.checked;
+  _writeSettings(s);
+  applySettings(s);
+});
 
 document.getElementById('ui-scale-btns')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.settings-scale-btn[data-scale]');

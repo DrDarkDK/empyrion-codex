@@ -183,6 +183,40 @@ html[data-ui-scale-items="xl"] #compare-overlay .sticky       { zoom: 1.4; }
   transform: translateX(14px); /* 32 - 2(left) - 14(knob) - 2(right) = 14px */
 }
 
+/*
+ * Generic pill toggle used by settings checkboxes.
+ * Pattern: <input type="checkbox" class="sr-only"> + <span class="settings-toggle-track">
+ */
+.settings-toggle-track {
+  position: relative;
+  display: inline-flex;
+  width: 2rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background-color: #52525b; /* zinc-600 */
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.settings-toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease;
+}
+input[type="checkbox"]:checked + .settings-toggle-track {
+  background-color: #2563eb; /* blue-600 */
+}
+input[type="checkbox"]:checked + .settings-toggle-track::after {
+  transform: translateX(14px);
+}
+
 /* Raise the scroll-to-top button above the compare bar when it's visible */
 #section-items:has(#compare-bar:not(.hidden)) .scroll-top-btn {
   bottom: calc(var(--compare-bar-height, 3.5rem) + 0.75rem);

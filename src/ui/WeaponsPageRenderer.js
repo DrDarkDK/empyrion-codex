@@ -174,8 +174,8 @@ export class WeaponsPageRenderer {
    * @param {{ columnGroups: object[], tierPercentiles: object } | null} config
    */
   setConfig(config) {
-    this._columnGroups    = config?.columnGroups    ?? DEFAULT_COLUMN_GROUPS;
-    this._tierPercentiles = config?.tierPercentiles ?? DEFAULT_TIER_PERCENTILES;
+    this._columnGroups    = config?.columnGroups    ?? null;
+    this._tierPercentiles = config?.tierPercentiles ?? null;
     // Reset sort/selection — the old column index may not exist in the new column set
     this._sortColIdx          = -1;
     this._sortDir             = 'asc';

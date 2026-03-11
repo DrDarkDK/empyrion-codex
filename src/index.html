@@ -607,7 +607,8 @@
                 </div>
                 <div>
                   <p class="text-[11px] font-semibold uppercase tracking-widest text-emerald-500/70 mb-1">Your Data Stays on Your Computer</p>
-                  <p class="text-[13px] text-slate-400 leading-relaxed">All scenario files and configuration data you load are parsed entirely in your browser. No files, game data, or personal information are ever uploaded to or stored on any server. This site contains <strong class="text-slate-300">no analytics, no tracking scripts, and no cookies</strong>.</p>
+                  <p class="text-[13px] text-slate-400 leading-relaxed">All scenario files and configuration data you load are parsed entirely in your browser. No files, game data, or personal information are ever uploaded to or stored on any server.</p>
+                  <p class="text-[13px] text-slate-400 leading-relaxed mt-2">This site uses <a href="https://plausible.io" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors">Plausible Analytics</a> to collect basic, anonymous usage statistics — specifically which pages are visited and which featured scenarios are downloaded. Plausible is a privacy-first, open-source analytics tool: it uses <strong class="text-slate-300">no cookies</strong>, collects <strong class="text-slate-300">no personal data</strong>, and is fully GDPR-compliant. You can opt out at any time under <button class="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors cursor-pointer" onclick="document.getElementById('section-settings') && (document.querySelectorAll('.sidebar-btn[data-section=settings]')[0]?.click())" type="button">Settings → Privacy</button>.</p>
                   <p class="text-[13px] text-slate-400 leading-relaxed mt-2">This site is served via <strong class="text-slate-300">Cloudflare</strong>, which may process standard request metadata (such as IP addresses) as part of its infrastructure. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors">Cloudflare's Privacy Policy</a> for details.</p>
                 </div>
               </div>
@@ -624,6 +625,19 @@
           <h2 class="text-2xl font-bold text-white">Changelog</h2>
         </header>
         <div id="changelog-scroll" class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-5">
+
+          <!-- v1.3.1 — 2026-03-11 -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+              <span class="text-xs font-bold text-teal-300 bg-teal-950/60 border border-teal-800/50 px-2.5 py-0.5 rounded-full">v1.3.1</span>
+              <span class="text-[11px] text-zinc-500">March 11, 2026</span>
+            </div>
+            <ul class="flex flex-col gap-1.5">
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added the Weapons page, featuring a colour-coded damage matrix showing every weapon's effectiveness against each block material category, and a Block Lookup view for seeing every weapon ranked against a specific block type. Enabled per scenario via the featured scenario manifest.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Featured scenarios are now served as compressed <code class="text-slate-300 bg-zinc-800/60 px-1 rounded text-[12px]">.empcdx.gz</code> files, significantly reducing download sizes.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added privacy-first analytics via <a href="https://plausible.io" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors">Plausible Analytics</a> — no cookies, no personal data. Only basic page views and featured scenario download counts are tracked. You can opt out at any time under Settings → Privacy.</span></li>
+            </ul>
+          </div>
 
           <!-- v1.2.4 — 2026-03-10 -->
           <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
@@ -693,6 +707,27 @@
           <h2 class="text-2xl font-bold text-white">Settings</h2>
         </header>
         <div class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-8">
+
+          <!-- Privacy -->
+          <div class="flex flex-col gap-4">
+            <h2 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text" style="background-image:linear-gradient(to right,#fff,#94a3b8)">Privacy</h2>
+            <div class="h-0.5 w-14 rounded" style="background:linear-gradient(to right,#10b981,#3b82f6)"></div>
+
+            <!-- Analytics toggle -->
+            <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-5" style="border-left-color:#10b981">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-white">Analytics</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Help improve the site by sending anonymous <b>page views</b> and <b>featured scenario download counts</b> (does not apply to imported scenarios) to <a href="https://plausible.io" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors">Plausible Analytics</a>. No cookies or personal data are ever collected.</p>
+                </div>
+                <label class="flex items-start gap-2 cursor-pointer select-none mt-0.5" title="Toggle analytics" aria-label="Enable analytics">
+                  <input type="checkbox" id="analytics-toggle" class="sr-only" checked />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+
+          </div>
 
           <!-- Navigation -->
           <div class="flex flex-col gap-4">

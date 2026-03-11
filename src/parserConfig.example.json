@@ -1,6 +1,11 @@
 {
   "_comment": "Copy this file to parserConfig.json and adjust to taste. All _comment fields are ignored at runtime.",
 
+  "analytics": {
+    "_comment": "Plausible Analytics configuration.",
+    "domain": ""
+  },
+
   "discard": {
     "_comment_name": "Items/Blocks whose DevName contains any of these substrings (case-sensitive) are silently dropped.",
     "nameSubstrings": [

@@ -8,6 +8,7 @@ import { TraderDetailRenderer } from './ui/TraderDetailRenderer.js';
 import { TraderLocationEditor } from './ui/TraderLocationEditor.js';
 import { LocationsPageRenderer } from './ui/LocationsPageRenderer.js';
 import { RoutesPageRenderer } from './ui/RoutesPageRenderer.js';
+import { WeaponsPageRenderer } from './ui/WeaponsPageRenderer.js';
 import { CompareState } from './ui/CompareState.js';
 import { CompareRenderer } from './ui/CompareRenderer.js';
 import { buildComparison } from './ui/CompareBuilder.js';
@@ -28,6 +29,23 @@ import {
   updateRoute,
   deleteRoute,
 } from './db.js';
+
+const weaponsPageRenderer = new WeaponsPageRenderer();
+
+/**
+ * Builds a weapons config object from a featured scenario manifest entry.
+ * Returns null when the entry carries no per-scenario config, which causes
+ * WeaponsPageRenderer to fall back to the global parserConfig.json defaults.
+ * @param {object} entry  A manifest.json scenario entry
+ * @returns {{ columnGroups: object[], tierPercentiles: object } | null}
+ */
+function _buildWeaponsConfig(entry) {
+  if (!entry?.weapons && !entry?.weaponTiers) return null;
+  return {
+    columnGroups:    entry.weapons?.columnGroups ?? undefined,
+    tierPercentiles: entry.weaponTiers           ?? undefined,
+  };
+}
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 const navButtons    = document.querySelectorAll('.sidebar-btn');
@@ -84,14 +102,20 @@ function navigateTo(sectionId) {
   const aboutSubnav = document.getElementById('about-subnav');
   if (aboutSubnav) aboutSubnav.classList.toggle('hidden', activeNavKey !== 'about');
 
+  // Show weapons sub-nav only while Weapons is the active section.
+  const weaponsSubnav = document.getElementById('weapons-subnav');
+  if (weaponsSubnav) weaponsSubnav.classList.toggle('hidden', activeNavKey !== 'weapons');
+
   syncTradingSubnav();
   syncAboutSubnav();
+  syncWeaponsSubnav();
 
   if (sectionId === 'section-scenarios') renderSavedScenarios();
   if (sectionId === 'section-items')     rerenderItems();
   if (sectionId === 'section-trading')   rerenderTraders();
   if (sectionId === 'section-locations') renderLocationsPage();
   if (sectionId === 'section-routes')    renderRoutesPage();
+  if (sectionId === 'section-weapons')   rerenderWeapons();
 }
 
 /**
@@ -124,11 +148,18 @@ function syncAboutSubnav() {
   _setSubnavBtnActive('changelog-nav-btn', currentSectionId === 'section-changelog');
 }
 
+/** Syncs the active highlight on the Weapons sub-nav buttons. */
+function syncWeaponsSubnav() {
+  const onWeapons = currentSectionId === 'section-weapons';
+  _setSubnavBtnActive('weapons-matrix-nav-btn', onWeapons && weaponsView === 'matrix');
+  _setSubnavBtnActive('weapons-lookup-nav-btn', onWeapons && weaponsView === 'lookup');
+}
+
 /** Enables/disables nav buttons that require loaded data. */
 function updateNavState() {
   const hasData = !!(lastItemResults?.length || rawTradersCfg?.length);
   navButtons.forEach(btn => {
-    if (btn.dataset.section === 'items' || btn.dataset.section === 'trading') {
+    if (btn.dataset.section === 'items' || btn.dataset.section === 'trading' || btn.dataset.section === 'weapons') {
       btn.disabled = !hasData;
       btn.title = hasData ? '' : 'Load a scenario first';
     }
@@ -1002,6 +1033,10 @@ let rawTemplatesCfg = null;
 let rawTradersCfg   = null;
 /** Token[] from TokenConfig.ecf. */
 let rawTokensCfg    = null;
+/** Material[] from MaterialConfig.ecf. */
+let rawMaterialsCfg = null;
+/** DamageMultiplier[] from DamageMultiplierConfig.ecf. */
+let rawDamageMultiplierCfg = null;
 
 /**
  * Merges rawItemsCfg and rawBlocksCfg into a single visible-items list.
@@ -1187,6 +1222,112 @@ function normalizeTraderTokens(trader) {
     buyingItems:  normalizeTokenItems(trader.buyingItems),
   };
 }
+
+// ── Weapons view ──────────────────────────────────────────────────────────────
+
+/** Currently active tab on the Weapons page. */
+let weaponsView = 'matrix'; // 'matrix' | 'lookup'
+
+/** Re-renders the Weapons page for the current weaponsView. */
+function rerenderWeapons() {
+  const contentEl = document.getElementById('weapons-content');
+  if (!contentEl) return;
+
+  // Sync search placeholder with current view
+  const searchEl = document.getElementById('weapons-search');
+  if (searchEl) searchEl.placeholder = weaponsView === 'matrix' ? 'Search weapons\u2026' : 'Search blocks\u2026';
+
+  const hasData = !!(rawBlocksCfg?.length || rawMaterialsCfg?.length || rawDamageMultiplierCfg?.length);
+  if (!hasData) {
+    contentEl.innerHTML = '<p class="text-xs text-slate-700 text-center py-20 italic select-none">No data loaded.</p>';
+    return;
+  }
+
+  if (activeFeaturedIdx === null && activeManifestEntry === null) {
+    contentEl.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-24 gap-4 select-none px-6">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p class="text-sm text-slate-400 text-center max-w-sm leading-relaxed">
+          The Weapons tab is only available for built-in featured scenarios.
+        </p>
+        <p class="text-xs text-slate-600 text-center max-w-sm leading-relaxed">
+          Go to the Scenarios page and load one of the featured scenarios to use this feature.
+        </p>
+      </div>`;
+    return;
+  }
+
+  if (!activeWeaponsSupported) {
+    contentEl.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-24 gap-4 select-none px-6">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+        </svg>
+        <p class="text-sm text-slate-400 text-center max-w-sm leading-relaxed">
+          The Weapons page is unfortunately not compatible with this scenario.
+        </p>
+      </div>`;
+    return;
+  }
+
+  const allItems = [...(rawBlocksCfg ?? []), ...(rawItemsCfg ?? [])];
+  const itemLookup = new Map(allItems.map(i => [i.name, i]));
+  const onBlockClick = (blockName) => { const it = itemLookup.get(blockName); if (it) openDrawer(it); };
+
+  if (weaponsView === 'matrix') {
+    weaponsPageRenderer.renderMatrix(
+      {
+        blocks:            rawBlocksCfg           ?? [],
+        items:             rawItemsCfg            ?? [],
+        damageMultipliers: rawDamageMultiplierCfg ?? [],
+      },
+      contentEl,
+      resolveDisplayName,
+      onBlockClick,
+      resolveIconUrl,
+    );
+  } else {
+    weaponsPageRenderer.renderLookup(
+      {
+        blocks:            rawBlocksCfg           ?? [],
+        items:             rawItemsCfg            ?? [],
+        damageMultipliers: rawDamageMultiplierCfg ?? [],
+        materials:         rawMaterialsCfg        ?? [],
+      },
+      contentEl,
+      resolveDisplayName,
+      onBlockClick,
+      resolveIconUrl,
+    );
+  }
+}
+
+document.getElementById('weapons-matrix-nav-btn')?.addEventListener('click', () => {
+  const searchEl = document.getElementById('weapons-search');
+  if (searchEl) { searchEl.value = ''; searchEl.placeholder = 'Search weapons…'; }
+  weaponsView = 'matrix';
+  navigateTo('section-weapons');
+  closeSidebar();
+});
+
+document.getElementById('weapons-lookup-nav-btn')?.addEventListener('click', () => {
+  const searchEl = document.getElementById('weapons-search');
+  if (searchEl) { searchEl.value = ''; searchEl.placeholder = 'Search blocks…'; }
+  weaponsView = 'lookup';
+  navigateTo('section-weapons');
+  closeSidebar();
+});
+
+// Live search filter for the weapons page (matrix: filters weapons; lookup: filters blocks)
+document.getElementById('weapons-search')?.addEventListener('input', (e) => {
+  if (weaponsView === 'matrix') {
+    weaponsPageRenderer.applyFilter(e.target.value);
+  } else {
+    weaponsPageRenderer.applyLookupFilter(e.target.value);
+  }
+});
 
 /** Re-renders the traders grid applying the current trading search filter. */
 function rerenderTraders() {
@@ -1620,6 +1761,28 @@ async function loadTokensFile(file) {
 }
 
 /**
+ * Parses a MaterialConfig.ecf file and stores the results in rawMaterialsCfg.
+ * @param {File} file
+ */
+async function loadMaterialsFile(file) {
+  const text    = await file.text();
+  const results = ParserFactory.getParser('MaterialConfig.ecf').parse(text);
+  rawMaterialsCfg = results;
+  updateExportStatus();
+}
+
+/**
+ * Parses a DamageMultiplierConfig.ecf file and stores the results in rawDamageMultiplierCfg.
+ * @param {File} file
+ */
+async function loadDamageMultiplierFile(file) {
+  const text    = await file.text();
+  const results = ParserFactory.getParser('DamageMultiplierConfig.ecf').parse(text);
+  rawDamageMultiplierCfg = results;
+  updateExportStatus();
+}
+
+/**
  * Finds a file in the selected FileList by matching a path suffix.
  * e.g. findInScenario(files, 'Extras', 'Localization.csv')
  * @param {File[]} files
@@ -1642,39 +1805,57 @@ document.getElementById('scenario-input').addEventListener('change', async (e) =
   const pendingHash = location.hash;
 
   const scenarioName = files[0].webkitRelativePath.split('/')[0];
+
+  // Check if this custom scenario matches a manifest entry by name or alias,
+  // and if so apply its weapons config.
+  const manifestEntry = featuredManifest.find(entry => {
+    const names = [entry.name, ...(entry.aliases ?? [])].map(n => n.toLowerCase());
+    return names.includes(scenarioName.toLowerCase());
+  });
+  activeManifestEntry    = manifestEntry ?? null;
+  activeWeaponsSupported = manifestEntry ? manifestEntry.weaponsSupported !== false : true;
+  weaponsPageRenderer.setConfig(manifestEntry ? _buildWeaponsConfig(manifestEntry) : null);
   const nameEl = document.getElementById('scenario-name');
   nameEl.textContent = scenarioName;
   nameEl.classList.remove('hidden');
 
-  const locFile       = findInScenario(files, 'Extras', 'Localization.csv');
-  const itemsFile     = findInScenario(files, 'Content', 'Configuration', 'ItemsConfig.ecf');
-  const blocksFile    = findInScenario(files, 'Content', 'Configuration', 'BlocksConfig.ecf');
-  const traderFile    = findInScenario(files, 'Content', 'Configuration', 'TraderNPCConfig.ecf');
-  const templatesFile = findInScenario(files, 'Content', 'Configuration', 'Templates.ecf');
-  const tokenFile     = findInScenario(files, 'Content', 'Configuration', 'TokenConfig.ecf');
+  const locFile              = findInScenario(files, 'Extras', 'Localization.csv');
+  const itemsFile            = findInScenario(files, 'Content', 'Configuration', 'ItemsConfig.ecf');
+  const blocksFile           = findInScenario(files, 'Content', 'Configuration', 'BlocksConfig.ecf');
+  const traderFile           = findInScenario(files, 'Content', 'Configuration', 'TraderNPCConfig.ecf');
+  const templatesFile        = findInScenario(files, 'Content', 'Configuration', 'Templates.ecf');
+  const tokenFile            = findInScenario(files, 'Content', 'Configuration', 'TokenConfig.ecf');
+  const materialsFile        = findInScenario(files, 'Content', 'Configuration', 'MaterialConfig.ecf');
+  const damageMultiplierFile = findInScenario(files, 'Content', 'Configuration', 'DamageMultiplierConfig.ecf');
 
   buildIconMap(files);
 
   // Reset raw item sources for a clean scenario load
-  rawItemsCfg     = null;
-  rawBlocksCfg    = null;
-  rawTemplatesCfg = null;
-  rawTokensCfg    = null;
+  rawItemsCfg            = null;
+  rawBlocksCfg           = null;
+  rawTemplatesCfg        = null;
+  rawTokensCfg           = null;
+  rawMaterialsCfg        = null;
+  rawDamageMultiplierCfg = null;
 
   // Localization must load first so item names resolve correctly on render
   if (locFile) await applyLocalization(locFile);
 
   // Load items-section files sequentially to avoid state conflicts
   const itemsSectionEl = document.getElementById('section-items');
-  if (itemsFile)     await loadEcfIntoSection(itemsFile,  itemsSectionEl);
-  if (blocksFile)    await loadEcfIntoSection(blocksFile, itemsSectionEl);
-  if (traderFile)    await loadEcfIntoSection(traderFile, document.getElementById('section-trading'));
-  if (templatesFile) await loadTemplatesFile(templatesFile);
-  if (tokenFile)     await loadTokensFile(tokenFile);
+  if (itemsFile)            await loadEcfIntoSection(itemsFile,  itemsSectionEl);
+  if (blocksFile)           await loadEcfIntoSection(blocksFile, itemsSectionEl);
+  if (traderFile)           await loadEcfIntoSection(traderFile, document.getElementById('section-trading'));
+  if (templatesFile)        await loadTemplatesFile(templatesFile);
+  if (tokenFile)            await loadTokensFile(tokenFile);
+  if (materialsFile)        await loadMaterialsFile(materialsFile);
+  if (damageMultiplierFile) await loadDamageMultiplierFile(damageMultiplierFile);
 
   // Auto-save to browser cache
   await persistScenario(await buildExportPayload());
   renderSavedScenarios();
+
+  if (currentSectionId === 'section-weapons') rerenderWeapons();
 
   _tryRestoreFromHash(pendingHash);
 });
@@ -1683,6 +1864,7 @@ document.getElementById('scenario-input').addEventListener('change', async (e) =
 document.getElementById('localization-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  activeManifestEntry = null;
   await applyLocalization(file);
 });
 
@@ -1690,6 +1872,7 @@ document.querySelectorAll('.file-input').forEach(input => {
   input.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    activeManifestEntry = null;
     const navTarget = e.target.dataset.nav;
     const sectionEl = navTarget
       ? document.getElementById(navTarget)
@@ -1846,14 +2029,16 @@ async function buildExportPayload() {
     for (const [k, v] of iconDataMap) icons[k] = v;
   }
   return {
-    version:      1,
-    scenarioName: scenarioName || null,
-    items:        rawItemsCfg   ?? [],
-    blocks:       rawBlocksCfg  ?? [],
-    traders:      rawTradersCfg ?? [],
-    tokens:       rawTokensCfg  ?? [],
-    templates:    rawTemplatesCfg ? [...rawTemplatesCfg.values()] : [],
-    localization: localizationMap  ? Object.fromEntries(localizationMap)  : {},
+    version:            1,
+    scenarioName:       scenarioName || null,
+    items:              rawItemsCfg            ?? [],
+    blocks:             rawBlocksCfg           ?? [],
+    traders:            rawTradersCfg          ?? [],
+    tokens:             rawTokensCfg           ?? [],
+    templates:          rawTemplatesCfg ? [...rawTemplatesCfg.values()] : [],
+    localization:       localizationMap ? Object.fromEntries(localizationMap) : {},
+    materials:          rawMaterialsCfg        ?? [],
+    damageMultipliers:  rawDamageMultiplierCfg ?? [],
     icons,
   };
 }
@@ -1892,13 +2077,15 @@ async function applyEmpdbData(data) {
   // Save hash before closeDrawer (called below) clears it
   const pendingHash = location.hash;
 
-  rawItemsCfg     = data.items?.length    ? data.items    : null;
-  rawBlocksCfg    = data.blocks?.length   ? data.blocks   : null;
-  rawTradersCfg   = data.traders?.length  ? data.traders  : null;
-  rawTokensCfg    = data.tokens?.length    ? data.tokens   : null;
-  rawTemplatesCfg = data.templates?.length
+  rawItemsCfg            = data.items?.length               ? data.items               : null;
+  rawBlocksCfg           = data.blocks?.length              ? data.blocks              : null;
+  rawTradersCfg          = data.traders?.length             ? data.traders             : null;
+  rawTokensCfg           = data.tokens?.length              ? data.tokens              : null;
+  rawTemplatesCfg        = data.templates?.length
     ? new Map(data.templates.map(t => [t.name, t]))
     : null;
+  rawMaterialsCfg        = data.materials?.length           ? data.materials           : null;
+  rawDamageMultiplierCfg = data.damageMultipliers?.length   ? data.damageMultipliers   : null;
   localizationMap = data.localization && Object.keys(data.localization).length
     ? new Map(Object.entries(data.localization))
     : null;
@@ -1910,10 +2097,15 @@ async function applyEmpdbData(data) {
   iconFileMap = new Map();
 
   if (data.scenarioName) {
+    activeScenarioName = data.scenarioName;
     const nameEl = document.getElementById('scenario-name');
     nameEl.textContent = data.scenarioName;
     nameEl.classList.remove('hidden');
   }
+
+  // If no featured scenario is active, try to match this scenario's name
+  // against the manifest so hidden entries get their weapons config.
+  _applyManifestMatch(activeScenarioName);
 
   // Rebuild lastItemResults from restored raw sources
   if (rawItemsCfg || rawBlocksCfg) {
@@ -1935,7 +2127,9 @@ async function applyEmpdbData(data) {
 document.getElementById('empdb-input')?.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  activeFeaturedIdx = null;
+  activeFeaturedIdx   = null;
+  activeManifestEntry = null;
+  weaponsPageRenderer.setConfig(null); // reset to global defaults for non-featured scenarios
   try {
     const data = JSON.parse(await file.text());
     await applyEmpdbData(data);
@@ -2139,10 +2333,32 @@ document.getElementById('import-user-data-input')?.addEventListener('change', as
 // The manifest is fetched once on startup. Full .empcdx data is only fetched
 // when the user explicitly clicks Load.
 
-let featuredManifest   = [];
-let activeFeaturedIdx  = null;
+let featuredManifest       = [];
+let activeFeaturedIdx      = null;
+let activeManifestEntry    = null;  // set when a custom import matches a manifest entry
+let activeScenarioName     = null;  // last scenario name from applyEmpdbData, for re-matching after manifest loads
+let activeWeaponsSupported = true;
 
 const FEATURED_PLACEHOLDER_SVG = `<svg xmlns='http://www.w3.org/2000/svg' class='w-10 h-10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='12' cy='12' r='10'/><line x1='2' y1='12' x2='22' y2='12'/><path d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'/></svg>`;
+
+/**
+ * Looks up a scenario name in the manifest and applies the matching weapons
+ * config to the page renderer. Only takes effect when no featured scenario
+ * is currently active (i.e. activeFeaturedIdx === null).
+ * @param {string|null} scenarioName
+ */
+function _applyManifestMatch(scenarioName) {
+  if (activeFeaturedIdx !== null) return;
+  const entry = scenarioName
+    ? featuredManifest.find(e => {
+        const names = [e.name, ...(e.aliases ?? [])].map(n => n.toLowerCase());
+        return names.includes(scenarioName.toLowerCase());
+      })
+    : undefined;
+  activeManifestEntry    = entry ?? null;
+  activeWeaponsSupported = entry ? entry.weaponsSupported !== false : true;
+  weaponsPageRenderer.setConfig(entry ? _buildWeaponsConfig(entry) : null);
+}
 
 function _hideFeaturedSection() {
   const card    = document.getElementById('featured-scenarios-card');
@@ -2166,6 +2382,7 @@ function _renderFeaturedScenarios() {
   const el = document.getElementById('featured-scenarios-list');
   if (!el) return;
   el.innerHTML = featuredManifest.map((s, i) => {
+    if (s.hidden) return '';
     const isLoaded = i === activeFeaturedIdx;
     const imgHtml = s.image
       ? `<img src="${escapeHtml(s.image)}" alt="" class="w-full h-full object-cover"
@@ -2185,6 +2402,24 @@ function _renderFeaturedScenarios() {
   </div>
 </div>`;
   }).join('');
+}
+
+/**
+ * Fetches a scenario file and returns the parsed JSON payload.
+ * Handles gzip-compressed files (.gz) transparently using the browser's
+ * built-in DecompressionStream API so that smaller files are transferred
+ * over the network and decompressed on the client.
+ * @param {string} url
+ * @returns {Promise<object>}
+ */
+async function _fetchScenarioData(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (url.endsWith('.gz')) {
+    const stream = res.body.pipeThrough(new DecompressionStream('gzip'));
+    return JSON.parse(await new Response(stream).text());
+  }
+  return res.json();
 }
 
 async function fetchAndRenderFeaturedScenarios() {
@@ -2212,12 +2447,12 @@ async function fetchAndRenderFeaturedScenarios() {
     const entry = featuredManifest[idx];
     if (entry?.file) {
       try {
-        const r = await fetch(entry.file);
-        if (r.ok) {
-          activeFeaturedIdx = idx;
-          await applyEmpdbData(await r.json());
-          _updateFeaturedButtons();
-        }
+        const data = await _fetchScenarioData(entry.file);
+        activeFeaturedIdx      = idx;
+        activeWeaponsSupported = entry.weaponsSupported !== false;
+        weaponsPageRenderer.setConfig(_buildWeaponsConfig(entry));
+        await applyEmpdbData(data);
+        _updateFeaturedButtons();
       } catch { /* ignore — user can load manually */ }
     }
   }
@@ -2231,14 +2466,16 @@ document.getElementById('featured-scenarios-list')?.addEventListener('click', as
   btn.disabled    = true;
   btn.textContent = 'Loading…';
   try {
-    const r = await fetch(entry.file);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    activeFeaturedIdx = Number(btn.dataset.featuredLoad);
-    await applyEmpdbData(await r.json());
+    const data = await _fetchScenarioData(entry.file);
+    activeFeaturedIdx      = Number(btn.dataset.featuredLoad);
+    activeWeaponsSupported = entry.weaponsSupported !== false;
+    weaponsPageRenderer.setConfig(_buildWeaponsConfig(entry));
+    await applyEmpdbData(data);
     _updateFeaturedButtons();
   } catch (err) {
     alert(`Failed to load "${escapeHtml(entry.name ?? '')}": ${err.message}`);
-    activeFeaturedIdx = null;
+    activeFeaturedIdx      = null;
+    activeWeaponsSupported = true;
     btn.disabled    = false;
     btn.textContent = 'Load Scenario';
   }
@@ -2303,6 +2540,7 @@ document.getElementById('saved-scenarios-list')?.addEventListener('click', async
   const loadBtn = e.target.closest('[data-load-scenario]');
   if (loadBtn) {
     activeFeaturedIdx = null;
+    weaponsPageRenderer.setConfig(null); // reset to global defaults for non-featured scenarios
     try { await applyEmpdbData((await db.getScenario(Number(loadBtn.dataset.loadScenario)))?.data); }
     catch (err) { alert(`Failed to load: ${err.message}`); }
     return;
@@ -2460,6 +2698,9 @@ function navigateToDefaultPage() {
   // Wait for any featured scenario to finish loading (network fetch) before
   // navigating, so data-gated nav buttons are enabled by the time we arrive.
   await _featuredLoadPromise;
+  // Re-apply manifest match now that featuredManifest is fully populated.
+  // The auto-load above may have run before the manifest fetch completed.
+  if (activeFeaturedIdx === null) _applyManifestMatch(activeScenarioName);
   navigateToDefaultPage();
 })();
 

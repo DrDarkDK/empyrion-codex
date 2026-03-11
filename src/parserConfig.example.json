@@ -1,0 +1,82 @@
+{
+  "_comment": "Copy this file to parserConfig.json and adjust to taste. All _comment fields are ignored at runtime.",
+
+  "discard": {
+    "_comment_name": "Items/Blocks whose DevName contains any of these substrings (case-sensitive) are silently dropped.",
+    "nameSubstrings": [
+      "Template",
+      "Debug",
+      "_Old",
+      "(POI)",
+      "Enemy",
+      "Eden_TurretAlien",
+      "Eden_TurretRaider",
+      "TurretLegacy",
+      "Eden_TurretSlowDamage",
+      "Eden_TurretOrganicAlienBeam",
+      "FoundationBlocks"
+    ],
+
+    "_comment_desc": "Items/Blocks that have any top-level property value containing any of these substrings (case-sensitive) are silently dropped.",
+    "descriptionSubstrings": [
+      "Eden_OldIteminfo",
+      "bkiTurretEnemyTESCH",
+      "POITurret",
+      "bkiAntiCollider",
+      "bkiAlienBlock"
+    ]
+  },
+
+  "items": {
+    "_comment_blocked": "These top-level Item properties are stripped before the item is shown in the UI.",
+    "blockedTopProps": [
+      "Meshfile", "OverrideTradingConstraints", "SfxJammed",
+      "RecipeName", "DropMeshfile", "Material", "HoldType", "Canhold",
+      "RepairCount", "NrSlots", "Category", "ShowUser", "Crosshair", "DegradationProb",
+      "GlobalRef", "XpFactor", "NoRepairInputItem", "AboveTerrainCheck", "SymType",
+      "PropHead", "CustomIcon", "PickupToToolbar", "DurabilityBreaksAfter", "LifetimeOnDrop",
+      "RadialMenu", "MapIcon", "Block Type", "FoodDecayedItem", "ExplosionHardness"
+    ],
+
+    "_comment_child_blocked": "These properties are stripped from child blocks inside Items.",
+    "blockedChildProps": [
+      "SfxBegin", "SfxLoop", "SfxStop",
+      "DamageMultiplier_1", "DamageMultiplier_2", "DamageMultiplier_3"
+    ],
+
+    "_comment_allowed_classes": "Only child blocks whose Class property matches one of these values are shown. Leave empty to hide all child classes.",
+    "allowedChildClasses": []
+  },
+
+
+  "blocks": {
+    "_comment_blocked": "These top-level Block properties are stripped before the block is shown in the UI.",
+    "blockedProps": [
+      "ChildShapes", "BlockColor", "Texture", "Shape", "DropMeshfile",
+      "IsDuplicateable", "IsAccessible", "Material", "Category",
+      "TemplateRoot", "TextureTable", "Place", "Model", "Mesh",
+      "Class", "IndexName", "Group", "LootList", "ShowBlockName",
+      "DropInventoryEntity", "SizeInBlocksLocked", "OccupySizeInBlocks",
+      "IsActivateableInCP", "IsLockable", "BlastParticleIndex", "BlastRadius",
+      "WeaponItem", "IsActivateable", "ForceMaxCount", "BlastParticleName",
+      "BlastDamage", "EnergyDynamicGroup", "TurretTargetIgnore", "RotSpeed",
+      "Zoom", "RadialMenu", "Faction", "IsIgnoreLC", "AllowWander", "ShowUser",
+      "Collide", "DialogueSingleUserAccess", "PickupTarget", "NPCModelRotation",
+      "CustomIcon", "Mesh-Damage-1", "Mesh-Damage-2", "Mesh-Damage-3", "Mesh-Damage-4",
+      "EssentialCategory", "IsUsingCPUSystem", "ParticleOffset", "IsTextureable",
+      "IsGPUInstance", "ItemPerAU", "Mod.RangeLY", "RepFac", "Voxelize", "IsColorable",
+      "ParticleName", "ShieldMultiplier", "ShieldPerCrystal", "IsActivatedOnPlace",
+      "IsKeepContainers", "Mod.RangeAU", "CostPerAU", "CostPerLY", "SoundRotate",
+      "SoundOnEnter", "PickupToToolbar", "RepairPerSecond", "FuelAccept", "MapIcon",
+      "MapName", "ForceNoPvEDamage", "XpFactor", "CanPickup", "IsTerrainDecoration",
+      "WarpAccept", "WeaponItemRotation", "ModelScaleLocked", "DialogueState",
+      "StabilitySupport", "OnHarvest", "OnDeath", "Next", "ItemStorageLimit",
+      "SymType", "ThrusterBoosterFactor", "SoundOpen", "SoundClose", "ROF",
+      "ReloadDelay", "GlobalRef", "IsAntiInfantryWeapon", "AboveTerrainCheck",
+      "ADBDroneAmmoType", "ADBDockingSpeedFac", "ADBActionRadius", "ADBMaxReserve",
+      "ADBMaxActiveDrone", "ADBMaxSpawner", "ADBDroneType", "ExplosionHardness",
+      "RemoveOnSI", "Mod.StackSize", "BulletSpread", "DamageMultiplier_Group",
+      "EntityDamage", "PenetrationDepth"
+    ]
+  }
+}

@@ -25,6 +25,9 @@ export class Item {
     this.name       = data.name       ?? null;
     this.recipeName = data.recipeName ?? null;
     this.material   = data.material   ?? null;
+    this.damageMultiplierGroup = data.damageMultiplierGroup ?? null;
+    /** @type {{ directMultipliers: import('../DamageMultiplierConfigParser.js').DamageMultiplierEntry[], blastMultipliers: import('../DamageMultiplierConfigParser.js').DamageMultiplierEntry[] } | null} */
+    this.inlineDamageMultipliers = data.inlineDamageMultipliers ?? null;
     this.category   = data.category   ?? null;
     this.mass       = data.mass       ?? null;
     this.volume     = data.volume     ?? null;

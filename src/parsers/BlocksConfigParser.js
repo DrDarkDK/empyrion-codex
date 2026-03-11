@@ -1,32 +1,6 @@
 import { BaseConfigParser } from './BaseConfigParser.js';
 import { Block } from './models/Block.js';
-
-const BLOCKED_PROPS = new Set([
-  'ChildShapes', 'BlockColor', 'Texture', 'Shape', 'DropMeshfile',
-  'IsDuplicateable', 'IsAccessible', 'Material', 'Category',
-  'TemplateRoot', 'TextureTable', 'Place', 'Model', 'Mesh',
-  'Class', 'IndexName', 'Group', 'LootList', 'ShowBlockName',
-  'DropInventoryEntity', 'SizeInBlocksLocked', 'OccupySizeInBlocks',
-  'IsActivateableInCP', 'IsLockable', 'BlastParticleIndex', 'BlastRadius',
-  'WeaponItem', 'IsActivateable', 'ForceMaxCount', 'BlastParticleName',
-  'BlastDamage', 'EnergyDynamicGroup', 'TurretTargetIgnore', 'RotSpeed',
-  'Zoom', 'RadialMenu', 'Faction', 'IsIgnoreLC', 'AllowWander', 'ShowUser',
-  'Collide', 'DialogueSingleUserAccess', 'PickupTarget', 'NPCModelRotation',
-  'CustomIcon', 'Mesh-Damage-1', 'Mesh-Damage-2', 'Mesh-Damage-3', 'Mesh-Damage-4',
-  'EssentialCategory', 'IsUsingCPUSystem', 'ParticleOffset', 'IsTextureable',
-  'IsGPUInstance', 'ItemPerAU', 'Mod.RangeLY', 'RepFac', 'Voxelize', 'IsColorable',
-  'ParticleName', 'ShieldMultiplier', 'ShieldPerCrystal', 'IsActivatedOnPlace',
-  'IsKeepContainers', 'Mod.RangeAU', 'CostPerAU', 'CostPerLY', 'SoundRotate',
-  'SoundOnEnter', 'PickupToToolbar', 'RepairPerSecond', 'FuelAccept', 'MapIcon',
-  'MapName', 'ForceNoPvEDamage', 'XpFactor', 'CanPickup', 'IsTerrainDecoration',
-  'WarpAccept', 'WeaponItemRotation', 'ModelScaleLocked', 'DialogueState',
-  'StabilitySupport', 'OnHarvest', 'OnDeath', 'Next', 'ItemStorageLimit',
-  'SymType', 'ThrusterBoosterFactor', 'SoundOpen', 'SoundClose', 'ROF',
-  'ReloadDelay', 'GlobalRef', 'IsAntiInfantryWeapon', 'AboveTerrainCheck',
-  'ADBDroneAmmoType', 'ADBDockingSpeedFac', 'ADBActionRadius', 'ADBMaxReserve',
-  'ADBMaxActiveDrone', 'ADBMaxSpawner', 'ADBDroneType', 'ExplosionHardness',
-  'RemoveOnSI',
-]);
+import { BLOCKED_PROPS, shouldDiscard } from './parserConfig.js';
 
 /**
  * Parses BlocksConfig.ecf into an array of {@link Block} objects.
@@ -40,7 +14,7 @@ export class BlocksConfigParser extends BaseConfigParser {
    */
   transform(blocks) {
     return blocks
-      .filter(block => block.type === 'Block')
+      .filter(block => block.type === 'Block' && !shouldDiscard(block))
       .map(block => this._transformBlock(block));
   }
 
@@ -79,6 +53,7 @@ export class BlocksConfigParser extends BaseConfigParser {
       id:          block.attributes['Id'] != null ? Number(block.attributes['Id']) : null,
       name:        block.attributes['Name'] ?? null,
       material:    block.getPropertyValue('Material'),
+      weaponItem:  block.getPropertyValue('WeaponItem') != null ? String(block.getPropertyValue('WeaponItem')) : null,
       group:       block.getPropertyValue('Group'),
       hp:          block.getPropertyValue('HitPoints') ?? block.getPropertyValue('HP'),
       mass:        block.getPropertyValue('Mass'),

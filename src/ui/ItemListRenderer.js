@@ -63,8 +63,8 @@ export class ItemListRenderer {
     this._iconUrls = [];
     /** Active IntersectionObserver for lazy-filling — disconnected on re-render. */
     this._observer = null;
-    /** IntersectionObserver that unloads filled cards scrolled far off-screen. */
-    this._unloadObserver = null;
+    /** Generation counter — incremented on each render/teardown to cancel stale background fills. */
+    this._fillGeneration = 0;
     /** Items array from the most recent render — used by updatePinStates. */
     this._items = [];
     /** compareOptions from the most recent render — updated by updatePinStates. */
@@ -82,8 +82,7 @@ export class ItemListRenderer {
     this._iconUrls = [];
     this._observer?.disconnect();
     this._observer = null;
-    this._unloadObserver?.disconnect();
-    this._unloadObserver = null;
+    this._fillGeneration++; // cancel any pending background fill
     if (_itemHandlers.has(containerEl)) {
       const { click, keydown } = _itemHandlers.get(containerEl);
       containerEl.removeEventListener('click', click);
@@ -109,8 +108,7 @@ export class ItemListRenderer {
     this._iconUrls = [];
     this._observer?.disconnect();
     this._observer = null;
-    this._unloadObserver?.disconnect();
-    this._unloadObserver = null;
+    this._fillGeneration++; // cancel any pending background fill from the previous render
 
     if (_itemHandlers.has(containerEl)) {
       const { click, keydown } = _itemHandlers.get(containerEl);
@@ -138,6 +136,8 @@ export class ItemListRenderer {
       const isPinned    = compareOptions?.pinnedNames?.has(rawName) ?? false;
       const pinnedRing  = isPinned ? ' ring-2 ring-blue-500/60 bg-[#161f38]' : '';
 
+      const skeletonCategory = escapeHtml(items[i].category ?? '—');
+
       const ph = document.createElement('div');
       ph.className = `item-card group relative bg-[#161920] border border-slate-800/40 rounded-2xl p-4 hover:border-slate-700 hover:bg-[#1c2029] cursor-pointer transition-all duration-300 overflow-hidden${pinnedRing}`;
       ph.dataset.index = String(i);
@@ -145,25 +145,24 @@ export class ItemListRenderer {
       ph.setAttribute('role', 'button');
       // Strip any HTML tags/entities from displayName for the plain-text aria-label
       ph.setAttribute('aria-label', displayName.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'") || rawName);
-      // Let the browser skip rendering/painting this card when off-screen.
-      // contain-intrinsic-size: auto uses the last-measured height once seen,
-      // falling back to 220 px before first render (avoids layout collapse).
-      ph.style.setProperty('content-visibility', 'auto');
-      ph.style.setProperty('contain-intrinsic-size', 'auto 220px');
+      // Skeleton structure mirrors the filled card exactly so heights match.
       ph.innerHTML =
         `<div class="flex flex-col items-center pt-2 pb-3">` +
         `<div class="w-20 h-20 rounded-xl bg-zinc-800/80 animate-pulse"></div>` +
         `<div class="mt-3 text-center w-full min-w-0">` +
         `<p class="text-[13px] font-bold text-slate-100 truncate">${displayName}</p>` +
         `</div></div>` +
-        `<div class="border-t border-slate-800/30 mt-1 pt-2.5">` +
-        `<div class="h-2 w-2/5 bg-zinc-800/80 rounded-full animate-pulse"></div>` +
+        `<div class="border-t border-slate-800/30 mt-1 pt-2.5 flex justify-between items-center">` +
+        `<span class="text-[10px] text-slate-500">${skeletonCategory}</span>` +
+        `<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>` +
         `</div>`;
       grid.appendChild(ph);
     }
 
     this._items = items;
     this._compareOptions = compareOptions;
+
+    const scrollRoot = containerEl.parentElement;
 
     containerEl.innerHTML = '';
     containerEl.appendChild(grid);
@@ -194,57 +193,50 @@ export class ItemListRenderer {
     containerEl.addEventListener('click', handler);
     containerEl.addEventListener('keydown', keyHandler);
 
-    // ── Unload observer ────────────────────────────────────────────────────────
-    // Watches *filled* cards. When a card exits the 1500 px retention zone around
-    // the viewport it is reset to a skeleton, releasing its DOM subtree from memory.
-    // A 900 px hysteresis gap (1500 − 600) prevents fill↔unload thrashing.
-    this._unloadObserver = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) continue; // still within retention zone
-        const el = /** @type {HTMLElement} */ (entry.target);
-        if (!el.dataset.filled) continue;
-        const idx = Number(el.dataset.index);
-        const item = items[idx];
-        if (!item) continue;
-        // Lock the card's height so the grid row doesn't collapse.
-        const h = el.offsetHeight;
-        if (h > 0) el.style.minHeight = h + 'px';
-        // Restore skeleton.
-        const rawName     = item.name ?? 'Unknown';
-        const displayName = getDisplayName ? (getDisplayName(rawName) ?? escapeHtml(rawName)) : escapeHtml(rawName);
-        el.innerHTML =
-          `<div class="flex flex-col items-center pt-2 pb-3">` +
-          `<div class="w-20 h-20 rounded-xl bg-zinc-800/80 animate-pulse"></div>` +
-          `<div class="mt-3 text-center w-full min-w-0">` +
-          `<p class="text-[13px] font-bold text-slate-100 truncate">${displayName}</p>` +
-          `</div></div>` +
-          `<div class="border-t border-slate-800/30 mt-1 pt-2.5">` +
-          `<div class="h-2 w-2/5 bg-zinc-800/80 rounded-full animate-pulse"></div>` +
-          `</div>`;
-        delete el.dataset.filled;
-        this._unloadObserver.unobserve(el);
-        this._observer.observe(el);
-      }
-    }, { root: null, rootMargin: '1500px 0px' });
-
     // ── Fill observer ──────────────────────────────────────────────────────────
-    // Lazily fill cards as they scroll near the viewport.
-    // root: null observes relative to the browser viewport, which is correct here
-    // since the items grid is nested inside the overflow-scroll parent, not equal to it.
+    // Fills cards as they enter the area around the scroll viewport.
+    // Once filled a card is never unloaded — content-visibility:auto on each card
+    // lets the browser skip layout/paint for off-screen content, so keeping the
+    // DOM nodes alive does not hurt rendering performance.
     this._observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         const el = /** @type {HTMLElement} */ (entry.target);
+        if (el.dataset.filled) continue;
         const idx = Number(el.dataset.index);
         el.innerHTML = this._cardInner(items[idx], idx, getDisplayName, getIconUrl, this._compareOptions);
         el.dataset.filled = '1';
-        el.style.removeProperty('min-height'); // allow natural sizing after refill
         this._observer.unobserve(el);
-        this._unloadObserver.observe(el);
       }
-    }, { root: null, rootMargin: '600px 0px' });
+    }, { root: scrollRoot, rootMargin: '800px 0px' });
 
     for (const el of grid.children) this._observer.observe(el);
+
+    // ── Background fill ────────────────────────────────────────────────────────
+    // Fill all remaining cards while the browser is idle so that by the time the
+    // user scrolls anywhere, every card is already fully rendered. The generation
+    // counter ensures stale callbacks from a previous render are no-ops.
+    const gen = ++this._fillGeneration;
+    let bgIdx = 0;
+    const backgroundFill = (deadline) => {
+      if (gen !== this._fillGeneration) return;
+      const children = grid.children;
+      while (bgIdx < children.length) {
+        if (deadline.timeRemaining() < 1 && !deadline.didTimeout) break;
+        const el = /** @type {HTMLElement} */ (children[bgIdx]);
+        if (!el.dataset.filled) {
+          const idx = Number(el.dataset.index);
+          el.innerHTML = this._cardInner(items[idx], idx, getDisplayName, getIconUrl, this._compareOptions);
+          el.dataset.filled = '1';
+          this._observer.unobserve(el);
+        }
+        bgIdx++;
+      }
+      if (bgIdx < children.length && gen === this._fillGeneration) {
+        requestIdleCallback(backgroundFill, { timeout: 500 });
+      }
+    };
+    requestIdleCallback(backgroundFill, { timeout: 1500 });
   }
 
   /**

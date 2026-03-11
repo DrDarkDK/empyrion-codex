@@ -1,0 +1,35 @@
+[
+  {
+    "_comment": "Copy this file to manifest.json and replace the entries with your own scenarios. All fields marked optional can be omitted.",
+
+    "name": "My Scenario",
+    "description": "A short description shown on the Scenarios page.",
+    "version": "1.0",
+
+    "_comment_files": "Paths below are relative to the site root. The .empcdx.gz file must be served from the same origin.",
+    "image": "scenarios/images/my-scenario.jpg",
+    "file": "scenarios/My Scenario.empcdx.gz",
+
+    "_comment_optional": "All fields below are optional.",
+
+    "hidden": false,
+    "aliases": ["AltName", "AnotherAlias"],
+
+    "_comment_weapons": "Per-scenario weapon matrix config. Overrides the global parserConfig.json defaults. Omit to use the defaults.",
+    "weapons": {
+      "columnGroups": [
+        {
+          "label": "Display Label",
+          "categories": ["damage_category_key_from_ecf"]
+        }
+      ]
+    },
+
+    "_comment_tiers": "Percentile thresholds (0–100) for the four damage-effectiveness tiers. Omit to use the parserConfig.json defaults.",
+    "weaponTiers": {
+      "ineffective": 25,
+      "normal": 75,
+      "effective": 90
+    }
+  }
+]

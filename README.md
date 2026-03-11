@@ -19,6 +19,7 @@ Everything runs entirely in your browser. Your files never leave your device.
 - [Features](#features)
 - [Getting Started](#getting-started)
 - [Loading data](#loading-data)
+- [Self-hosting](#self-hosting)
 - [Project structure](#project-structure)
 - [Tech stack](#tech-stack)
 - [Accessibility](#accessibility)
@@ -33,6 +34,8 @@ Everything runs entirely in your browser. Your files never leave your device.
 - **Browse items & blocks** — search by name, category, or stats; filter by vessel type (BA / HV / SV / CV) and category; sort by ID, name, or market price; filter by minimum price
 - **Item comparison** — pin up to 4 items and compare them side-by-side in a full-screen overlay, with differing rows highlighted
 - **Shareable links** — copy a direct link to any item; the URL auto-opens that item's detail drawer on load
+- **Weapon damage matrix** — colour-coded matrix of every weapon vs. configurable block-material columns; tier bands (Ineffective / Normal / Effective / Very Effective) are computed empirically from the scenario's own `DamageMultiplierConfig.ecf` data
+- **Block lookup** — select any block and see every weapon ranked by its damage multiplier against that specific block type
 - **Browse traders** — see what each NPC sells and buys, with estimated price ranges and stock quantities
 - **Trade opportunities** — find items that one trader sells and another buys, sorted by estimated profit
 - **Trader location tracking** — save trader locations with POI, playfield, and restock interval; live countdown timers show when a trader is ready to visit again
@@ -87,7 +90,7 @@ npm run watch
 
 ### Option A — Import a scenario folder
 
-Click **Import Scenario** on the Scenarios page and select the root folder of any Empyrion scenario. The tool will automatically find and load `ItemsConfig.ecf`, `BlocksConfig.ecf`, `TraderNPCConfig.ecf`, `Templates.ecf`, `TokenConfig.ecf`, and `Localization.csv`.
+Click **Import Scenario** on the Scenarios page and select the root folder of any Empyrion scenario. The tool will automatically find and load `ItemsConfig.ecf`, `BlocksConfig.ecf`, `TraderNPCConfig.ecf`, `Templates.ecf`, `TokenConfig.ecf`, `DamageMultiplierConfig.ecf`, and `Localization.csv`.
 
 Vanilla scenarios are usually at:
 ```
@@ -109,6 +112,26 @@ If you or someone else previously exported data via the **Export** button, you c
 
 ---
 
+## Self-hosting
+
+Two files are intentionally excluded from the repository because they contain deployment-specific data (server paths, large bundled scenario files). If you want to run your own public instance, you need to create them:
+
+### `src/parserConfig.json`
+
+Controls what the parsers load and how the Weapons page is configured (column groups, tier percentile thresholds, blocked properties). Copy `src/parserConfig.example.json` from the repository and adjust to taste.
+
+### `src/scenarios/manifest.json`
+
+Lists the scenarios available via the one-click "Featured" loader on the Scenarios page. Each entry points to a `.empcdx.gz` file served from the same origin. Copy `src/scenarios/manifest.example.json` from the repository and add your own entries.
+
+If you only need to run the app locally and don't need featured scenarios, create an empty manifest:
+
+```json
+[]
+```
+
+---
+
 ## Project structure
 
 ```
@@ -117,12 +140,17 @@ src/
 ├── db.js                           # IndexedDB wrapper (saved scenarios, locations, routes)
 ├── index.html                      # Single-page shell
 ├── input.css                       # Tailwind CSS entry point
+├── parserConfig.example.json       # Schema + defaults for parserConfig.json (committed)
+├── parserConfig.json               # Active parser config — NOT committed (see Self-hosting)
 ├── parsers/
 │   ├── BaseConfigParser.js         # Abstract base with Template Method pattern for ECF parsing
 │   ├── BlocksConfigParser.js
+│   ├── DamageMultiplierConfigParser.js
 │   ├── ItemsConfigParser.js
 │   ├── LocalizationParser.js
+│   ├── MaterialsConfigParser.js
 │   ├── ParserFactory.js            # Maps ECF filenames to the correct parser class
+│   ├── parserConfig.js             # Re-exports typed constants from parserConfig.json
 │   ├── TemplatesConfigParser.js
 │   ├── TokenConfigParser.js
 │   ├── TraderNPCConfigParser.js
@@ -132,12 +160,15 @@ src/
 │   │   └── EcfProperty.js          # Key/value property on a block
 │   └── models/
 │       ├── Block.js
+│       ├── DamageMultiplier.js
 │       ├── Item.js
+│       ├── Material.js
 │       ├── Template.js
 │       ├── Token.js
 │       └── TraderNPC.js
 ├── scenarios/
-│   ├── manifest.json               # Index of pre-bundled scenario files
+│   ├── manifest.example.json       # Schema + example for manifest.json (committed)
+│   └── manifest.json               # Active featured-scenario index — NOT committed (see Self-hosting)
 └── ui/
     ├── buildLocationForm.js        # Inline add/edit form for trader locations
     ├── categoryIcons.js            # SVG icon map by item category
@@ -152,7 +183,8 @@ src/
     ├── RoutesPageRenderer.js       # Renders the Routes page and the route builder
     ├── TraderDetailRenderer.js     # Detail drawer for traders
     ├── TraderLocationEditor.js     # Inline location editor embedded in the trader drawer
-    └── TraderRenderer.js           # Trader cards grid with lazy rendering and virtual unload
+    ├── TraderRenderer.js           # Trader cards grid with lazy rendering and virtual unload
+    └── WeaponsPageRenderer.js      # Weapon damage matrix and block-lookup views
 ```
 
 ---

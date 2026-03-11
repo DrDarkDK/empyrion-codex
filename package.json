@@ -7,6 +7,7 @@
     "start": "serve src --listen 3000",
     "build": "tailwindcss -i ./src/input.css -o ./src/dist/output.css",
     "watch": "tailwindcss -i ./src/input.css -o ./src/dist/output.css --watch",
+    "compress-scenarios": "node scripts/compress-scenarios.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

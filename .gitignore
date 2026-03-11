@@ -57,5 +57,11 @@ nunit-*.xml
 node_modules/
 src/dist/
 
-# Featured Scenarios
-src/scenarios/
+# Featured Scenarios — ignore large binaries and the real manifest, but keep the example template
+src/scenarios/*.empcdx
+src/scenarios/*.gz
+src/scenarios/images/
+src/scenarios/manifest.json
+
+# Parser / deployment config — real file is server-specific; example template is committed
+src/parserConfig.json

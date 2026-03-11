@@ -3,17 +3,21 @@ import { TraderNPCConfigParser } from './TraderNPCConfigParser.js';
 import { BlocksConfigParser } from './BlocksConfigParser.js';
 import { TemplatesConfigParser } from './TemplatesConfigParser.js';
 import { TokenConfigParser } from './TokenConfigParser.js';
+import { MaterialsConfigParser } from './MaterialsConfigParser.js';
+import { DamageMultiplierConfigParser } from './DamageMultiplierConfigParser.js';
 
 /**
  * Maps known ECF filenames to their corresponding parser classes.
  * @type {Record<string, new() => import('./BaseConfigParser.js').BaseConfigParser>}
  */
 const PARSER_REGISTRY = {
-  'ItemsConfig.ecf':   ItemsConfigParser,
-  'TraderNPCConfig.ecf': TraderNPCConfigParser,
-  'BlocksConfig.ecf':  BlocksConfigParser,
-  'Templates.ecf':     TemplatesConfigParser,
-  'TokenConfig.ecf':   TokenConfigParser,
+  'ItemsConfig.ecf':              ItemsConfigParser,
+  'TraderNPCConfig.ecf':          TraderNPCConfigParser,
+  'BlocksConfig.ecf':             BlocksConfigParser,
+  'Templates.ecf':                TemplatesConfigParser,
+  'TokenConfig.ecf':              TokenConfigParser,
+  'MaterialConfig.ecf':           MaterialsConfigParser,
+  'DamageMultiplierConfig.ecf':   DamageMultiplierConfigParser,
 };
 
 /**

@@ -21,6 +21,7 @@ export class Block {
     this.id          = data.id          ?? null;
     this.name        = data.name        ?? null;
     this.material    = data.material    ?? null;
+    this.weaponItem  = data.weaponItem  ?? null;
     this.group       = data.group       ?? null;
     this.hp          = data.hp          ?? null;
     this.mass        = data.mass        ?? null;

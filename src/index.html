@@ -180,6 +180,11 @@
               <button class="vessel-btn" data-vessel="SV">SV</button>
               <button class="vessel-btn" data-vessel="CV">CV</button>
             </div>
+            <div class="h-8 w-px bg-slate-800"></div>
+            <button data-page-share class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link to this page" aria-label="Copy link to this page">
+              <svg data-share-icon class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span data-share-label class="hidden">Copied!</span>
+            </button>
           </div>
         </header>
 
@@ -246,12 +251,7 @@
       </section>
 
       <!-- ── Weapons section ── -->
-      <section id="section-weapons" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
-
-        <!-- Header: title only -->
-        <header class="shrink-0 flex items-center px-4 md:px-8 h-14 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
-          <h2 class="text-2xl font-bold text-white">Weapons</h2>
-        </header>
+      <section id="section-weapons" class="section-panel hidden flex-1 flex flex-col overflow-x-hidden overflow-y-auto sm:overflow-hidden">
 
         <!-- Search bar (matrix view only) — sticky on mobile, static on desktop -->
         <div id="weapons-search-wrap" class="sticky top-0 sm:static shrink-0 px-4 md:px-8 pt-4 pb-4 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
@@ -265,8 +265,19 @@
           </div>
         </div>
 
+        <!-- Page title + share -->
+        <div class="shrink-0 flex items-end justify-between px-4 md:px-8 pt-4 md:pt-6 pb-4">
+          <h2 class="text-2xl font-bold text-white mb-1">Weapons</h2>
+          <div class="flex items-center gap-2 pb-0.5">
+            <button data-page-share class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link to this page" aria-label="Copy link to this page">
+              <svg data-share-icon class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span data-share-label class="hidden">Copied!</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Main content area -->
-        <div id="weapons-content" class="flex-1 min-h-0 overflow-auto custom-scrollbar"></div>
+        <div id="weapons-content" class="sm:flex-1 sm:min-h-0 sm:overflow-auto custom-scrollbar"></div>
 
         <!-- Legend bar -->
         <div class="shrink-0 grid grid-cols-2 sm:grid-cols-5 border-t border-slate-800/50 bg-[#0a0c10]">
@@ -296,8 +307,12 @@
 
       <!-- ── Scenarios section ── -->
       <section id="section-scenarios" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
-        <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+        <header class="shrink-0 h-20 flex items-center justify-between px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
           <h2 class="text-2xl font-bold text-white">Scenarios</h2>
+          <button data-page-share class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link to this page" aria-label="Copy link to this page">
+            <svg data-share-icon class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span data-share-label class="hidden">Copied!</span>
+          </button>
         </header>
 
         <div id="scenarios-scroll" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col">
@@ -469,7 +484,13 @@
               <span class="text-sm text-slate-500">Showing </span><span class="stat-count text-sm text-slate-400 font-medium"></span><span class="text-sm text-slate-500"> traders from </span><span class="stat-file text-sm text-slate-400 font-mono"></span>
             </div>
           </div>
-          <span id="trading-result-count" class="hidden text-sm text-slate-600 tabular-nums pb-0.5 select-none"></span>
+          <div class="flex items-center gap-2 pb-0.5">
+            <span id="trading-result-count" class="hidden text-sm text-slate-600 tabular-nums select-none"></span>
+            <button data-page-share class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link to this page" aria-label="Copy link to this page">
+              <svg data-share-icon class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span data-share-label class="hidden">Copied!</span>
+            </button>
+          </div>
         </div>
 
         <p class="error-msg text-xs text-red-400 hidden shrink-0 px-8 pb-2"></p>
@@ -490,11 +511,25 @@
 
       <!-- ── Locations section ── -->
       <section id="section-locations" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
-        <header class="shrink-0 flex items-center gap-4 px-4 md:px-8 h-16 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-          </svg>
-          <h2 class="text-xl font-bold text-white">My Locations</h2>
+        <header class="shrink-0 flex items-center justify-between gap-4 px-4 md:px-8 h-16 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <div class="flex items-center gap-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <h2 class="text-xl font-bold text-white">My Locations</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="locations-add-btn" class="shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-teal-700/50 border border-teal-600/40 text-teal-200 hover:bg-teal-600/60 hover:border-teal-500/50 hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span class="hidden sm:inline">Add Location</span>
+              <span class="sm:hidden">Add</span>
+            </button>
+            <div class="hidden sm:block w-px h-4 bg-slate-700 mx-0.5 shrink-0" aria-hidden="true"></div>
+            <button data-page-share class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link to this page" aria-label="Copy link to this page">
+              <svg data-share-icon class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span data-share-label class="hidden">Copied!</span>
+            </button>
+          </div>
         </header>
         <div id="locations-page-container" class="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 custom-scrollbar">
           <p class="text-xs text-slate-700 text-center py-20 italic select-none">No locations saved yet.</p>
@@ -503,14 +538,14 @@
 
       <!-- ── Routes section ── -->
       <section id="section-routes" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
-        <header class="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 md:px-8 py-3 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
-          <div class="flex items-center gap-3 shrink-0">
+        <header class="shrink-0 flex items-center justify-between gap-4 px-4 md:px-8 h-16 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+          <div class="flex items-center gap-4">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
             <h2 class="text-xl font-bold text-white">Routes</h2>
           </div>
-          <div class="ml-auto flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-2">
             <div class="flex items-center gap-2 shrink-0">
               <button id="export-user-data-json-btn" class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800/50 text-emerald-300 hover:bg-emerald-900/60 hover:border-emerald-700/60 hover:text-emerald-200 transition-colors" title="Export locations &amp; routes as JSON (re-importable)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -531,6 +566,11 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               New Route
             </button>
+            <div class="hidden sm:block w-px h-4 bg-slate-700 mx-0.5 shrink-0" aria-hidden="true"></div>
+            <button data-page-share class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link to this page" aria-label="Copy link to this page">
+              <svg data-share-icon class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span data-share-label class="hidden">Copied!</span>
+            </button>
           </div>
         </header>
         <div id="routes-page-container" class="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 custom-scrollbar">
@@ -540,8 +580,12 @@
 
       <!-- ── About section ── -->
       <section id="section-about" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
-        <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+        <header class="shrink-0 h-20 flex items-center justify-between px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
           <h2 class="text-2xl font-bold text-white">About</h2>
+          <button data-page-share class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link to this page" aria-label="Copy link to this page">
+            <svg data-share-icon class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span data-share-label class="hidden">Copied!</span>
+          </button>
         </header>
         <div id="about-scroll" class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-8">
           <div class="flex flex-col gap-3">
@@ -621,21 +665,41 @@
 
       <!-- ── Changelog section ── -->
       <section id="section-changelog" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
-        <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+        <header class="shrink-0 h-20 flex items-center justify-between px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
           <h2 class="text-2xl font-bold text-white">Changelog</h2>
+          <button data-page-share class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link to this page" aria-label="Copy link to this page">
+            <svg data-share-icon class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span data-share-label class="hidden">Copied!</span>
+          </button>
         </header>
         <div id="changelog-scroll" class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-5">
 
-          <!-- v1.3.1 — 2026-03-11 -->
+          <!-- v1.3.4 — 2026-03-12 -->
           <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
-              <span class="text-xs font-bold text-teal-300 bg-teal-950/60 border border-teal-800/50 px-2.5 py-0.5 rounded-full">v1.3.1</span>
+              <span class="text-xs font-bold text-teal-300 bg-teal-950/60 border border-teal-800/50 px-2.5 py-0.5 rounded-full">v1.3.4</span>
+              <span class="text-[11px] text-zinc-500">March 12, 2026</span>
+            </div>
+            <ul class="flex flex-col gap-1.5">
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added button to save a new location directly to the My Locations page.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Improved the way URLs are handled across all pages.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added new buttons to every page to copy the link to the specific page.</span></li>
+            </ul>
+          </div>
+
+          <!-- v1.3.2 — 2026-03-11 -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+              <span class="text-xs font-bold text-teal-300 bg-teal-950/60 border border-teal-800/50 px-2.5 py-0.5 rounded-full">v1.3.2</span>
               <span class="text-[11px] text-zinc-500">March 11, 2026</span>
             </div>
             <ul class="flex flex-col gap-1.5">
               <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added the Weapons page, featuring a colour-coded damage matrix showing every weapon's effectiveness against each block material category, and a Block Lookup view for seeing every weapon ranked against a specific block type. Enabled per scenario via the featured scenario manifest.</span></li>
               <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Featured scenarios are now served as compressed <code class="text-slate-300 bg-zinc-800/60 px-1 rounded text-[12px]">.empcdx.gz</code> files, significantly reducing download sizes.</span></li>
               <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added privacy-first analytics via <a href="https://plausible.io" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors">Plausible Analytics</a> — no cookies, no personal data. Only basic page views and featured scenario download counts are tracked. You can opt out at any time under Settings → Privacy.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Added link sharing to the item comparison window. This only works for featured scenarios.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Fixed that it was possible to share links to detailed item views for non-featured scenarios.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Fixed that loading a featured scenario and then importing a scenario would not unmark the featured scenario as loaded.</span></li>
             </ul>
           </div>
 
@@ -703,8 +767,12 @@
 
       <!-- ── Settings section ── -->
       <section id="section-settings" class="section-panel hidden flex-1 flex flex-col overflow-hidden">
-        <header class="shrink-0 h-20 flex items-center px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
+        <header class="shrink-0 h-20 flex items-center justify-between px-8 border-b border-slate-800/50 bg-[#0f1115]/80 backdrop-blur-md z-10">
           <h2 class="text-2xl font-bold text-white">Settings</h2>
+          <button data-page-share class="shrink-0 text-slate-600 hover:text-slate-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy link to this page" aria-label="Copy link to this page">
+            <svg data-share-icon class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span data-share-label class="hidden">Copied!</span>
+          </button>
         </header>
         <div class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-8">
 
@@ -884,6 +952,10 @@
           <span class="diff-toggle-track"></span>
           <span class="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">Differences only</span>
         </label>
+        <button id="compare-share-btn" class="hidden shrink-0 text-zinc-600 hover:text-zinc-100 transition-colors flex items-center gap-1.5 h-8 px-2 rounded hover:bg-slate-800 text-xs font-medium" title="Copy comparison link" aria-label="Copy link to this comparison">
+          <svg id="compare-share-icon" class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span id="compare-share-label" class="hidden">Copied!</span>
+        </button>
         <button id="compare-overlay-close" class="shrink-0 text-zinc-600 hover:text-zinc-100 transition-colors w-8 h-8 flex items-center justify-center rounded hover:bg-slate-800" aria-label="Close comparison">
           <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>

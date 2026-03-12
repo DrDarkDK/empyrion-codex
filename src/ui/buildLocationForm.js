@@ -17,8 +17,9 @@ import { escapeHtml } from './renderUtils.js';
  * @param {TraderItem[]}        [traderItems=[]]
  * @param {function|null}       [resolveIconUrl=null]
  * @param {TraderLocation|null} [existingLoc=null]  - When set, form pre-fills for editing
+ * @param {{showTraderField?:boolean, traders?:Array<{name:string,displayName:string}>, resolveTraderItems?:function}} [options={}]
  */
-export function buildLocationForm(container, onSave, onCancel, traderItems = [], resolveIconUrl = null, existingLoc = null) {
+export function buildLocationForm(container, onSave, onCancel, traderItems = [], resolveIconUrl = null, existingLoc = null, options = {}) {
   const fieldCls =
     'block w-full bg-[#070a10] border border-zinc-700/60 rounded-lg px-3 py-2 ' +
     'text-xs text-slate-200 placeholder-zinc-600 outline-none ' +
@@ -26,6 +27,12 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
   const labelCls = 'block text-[10px] text-zinc-400 uppercase tracking-wider font-medium mb-1.5';
 
   const isEditing = existingLoc != null;
+
+  const {
+    showTraderField    = false,
+    traders            = [],
+    resolveTraderItems = null,
+  } = options;
 
   // Track selected key items — must be in outer scope so the save handler can read it.
   // Each entry: { devName, displayName, intent: 'sell'|'buy'|null }
@@ -46,6 +53,16 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
 
       // ── Body ────────────────────────────────────────────────────────────
       `<div class="flex flex-col gap-4 px-4 pt-4 pb-3 bg-[#0a0c11]">` +
+
+        (showTraderField
+          ? `<div>` +
+              `<label class="${labelCls}">Trader <span class="text-red-400/80 normal-case not-italic font-normal" aria-hidden="true">*</span></label>` +
+              `<div class="relative">` +
+                `<input type="text" name="loc-trader" placeholder="Search traders\u2026" class="${fieldCls}" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-expanded="false" />` +
+                `<div class="loc-trader-dropdown hidden absolute left-0 right-0 top-full mt-1 z-20 rounded-lg border border-zinc-700/60 bg-[#0d1018] shadow-2xl shadow-black/60 overflow-y-auto max-h-52" role="listbox"></div>` +
+              `</div>` +
+            `</div>`
+          : '') +
 
         `<div class="grid grid-cols-2 gap-3">` +
           `<div>` +
@@ -101,8 +118,28 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
     notesInput.value     = existingLoc.notes ?? '';
   }
 
+  // ── State ─────────────────────────────────────────────────────────────────
+  // dev-name of the confirmed trader (set when showTraderField; for free-form it equals the typed value)
+  let selectedTraderDevName = null;
+  // tracks whether a key-items picker is currently rendered
+  let keyPickerActive = traderItems.length > 0;
+
   // ── Key Items picker ──────────────────────────────────────────────────────
-  if (traderItems.length) {
+  // Extracted into a function so it can be re-invoked when the trader changes.
+  const refreshKeyItems = (items) => {
+    keyPickerActive        = items.length > 0;
+    keyItemsWrap.innerHTML = '';
+
+    if (!items.length) {
+      if (showTraderField) {
+        const hint = document.createElement('p');
+        hint.className   = 'text-[11px] text-zinc-600 italic';
+        hint.textContent = 'Select a trader above to pick key items \u2014 optional';
+        keyItemsWrap.appendChild(hint);
+      }
+      return;
+    }
+
     const labelEl = document.createElement('label');
     labelEl.className = labelCls;
     labelEl.innerHTML =
@@ -195,7 +232,7 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
 
     const renderSuggestions = (query) => {
       const q = query.trim().toLowerCase();
-      const unselected = traderItems.filter(
+      const unselected = items.filter(
         i => !selectedItems.some(s => s.devName === i.devName),
       );
       const filtered = q
@@ -243,11 +280,136 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
 
     searchInput.addEventListener('input', () => renderSuggestions(searchInput.value));
     renderSuggestions(''); // Populate initial suggestions
-    if (isEditing) renderPills(); // Show pre-populated items
+    if (isEditing || selectedItems.length) renderPills(); // Restore selected items
+  };
+
+  // ── Trader autocomplete ────────────────────────────────────────────────────
+  if (showTraderField) {
+    const traderInput    = container.querySelector('[name="loc-trader"]');
+    const traderDropdown = container.querySelector('.loc-trader-dropdown');
+    let dropdownItems = [];
+    let activeIdx     = -1;
+
+    const getFilteredTraders = (query) => {
+      const q = query.trim().toLowerCase();
+      if (!q) return [];
+      return traders
+        .filter(t => t.displayName.toLowerCase().includes(q) || t.name.toLowerCase().includes(q))
+        .slice(0, 10);
+    };
+
+    const highlightItem = (idx) => {
+      traderDropdown.querySelectorAll('button[data-idx]').forEach((b, i) => {
+        b.classList.toggle('bg-zinc-800', i === idx);
+      });
+    };
+
+    const hideDropdown = () => {
+      traderDropdown.classList.add('hidden');
+      traderInput.setAttribute('aria-expanded', 'false');
+      activeIdx = -1;
+    };
+
+    const selectTrader = (t) => {
+      traderInput.value     = t.displayName;
+      selectedTraderDevName = t.name;
+      hideDropdown();
+      selectedItems = [];
+      refreshKeyItems(resolveTraderItems ? resolveTraderItems(t.name) : []);
+      validate();
+    };
+
+    const updateDropdown = (query) => {
+      dropdownItems = getFilteredTraders(query);
+      activeIdx     = -1;
+      traderDropdown.innerHTML = '';
+
+      // Don't open the dropdown when the field is empty
+      if (!query.trim()) { hideDropdown(); return; }
+
+      if (!dropdownItems.length) {
+        const msg = document.createElement('p');
+        msg.className   = 'text-[11px] text-zinc-600 italic px-3 py-2.5';
+        msg.textContent = traders.length ? 'No matching traders' : 'No scenario loaded yet';
+        traderDropdown.appendChild(msg);
+      } else {
+        dropdownItems.forEach((t, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.dataset.idx = i;
+          btn.className = 'w-full text-left px-3 py-2 flex flex-col gap-0.5 transition-colors hover:bg-zinc-800';
+          const nameEl = document.createElement('p');
+          nameEl.className   = 'text-xs text-slate-200 truncate';
+          nameEl.textContent = t.displayName;
+          btn.appendChild(nameEl);
+          if (t.name !== t.displayName) {
+            const devEl = document.createElement('p');
+            devEl.className   = 'text-[10px] text-zinc-500 truncate';
+            devEl.textContent = t.name;
+            btn.appendChild(devEl);
+          }
+          btn.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // prevent blur before selection fires
+            selectTrader(t);
+          });
+          traderDropdown.appendChild(btn);
+        });
+      }
+
+      traderDropdown.classList.remove('hidden');
+      traderInput.setAttribute('aria-expanded', 'true');
+    };
+
+    traderInput.addEventListener('input', () => {
+      // Reset confirmed selection when the user edits the field
+      selectedTraderDevName = traders.length === 0 ? (traderInput.value.trim() || null) : null;
+      updateDropdown(traderInput.value);
+      validate();
+    });
+    traderInput.addEventListener('blur', () => setTimeout(hideDropdown, 150));
+    traderInput.addEventListener('keydown', (e) => {
+      if (traderDropdown.classList.contains('hidden')) {
+        // ArrowDown only re-opens the dropdown if there's already text to filter by
+        if (e.key === 'ArrowDown' && traderInput.value.trim()) { e.preventDefault(); updateDropdown(traderInput.value); }
+        return;
+      }
+      const count = dropdownItems.length;
+      if (!count) { if (e.key === 'Escape') { e.stopPropagation(); hideDropdown(); } return; }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIdx = (activeIdx + 1) % count;
+        highlightItem(activeIdx);
+        traderDropdown.querySelectorAll('button[data-idx]')[activeIdx]?.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIdx = (activeIdx - 1 + count) % count;
+        highlightItem(activeIdx);
+        traderDropdown.querySelectorAll('button[data-idx]')[activeIdx]?.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter' && activeIdx >= 0) {
+        e.preventDefault();
+        selectTrader(dropdownItems[activeIdx]);
+      } else if (e.key === 'Escape') {
+        e.stopPropagation();
+        hideDropdown();
+      }
+    });
+
+    // Pre-fill when editing a location that has a traderName
+    if (isEditing && existingLoc.traderName) {
+      const match = traders.find(t => t.name === existingLoc.traderName);
+      traderInput.value     = match?.displayName ?? existingLoc.traderName;
+      selectedTraderDevName = existingLoc.traderName;
+    }
   }
 
+  // Initial key-items render
+  refreshKeyItems(traderItems);
+
   const validate = () => {
-    saveBtn.disabled = !playfieldInput.value.trim() || !poiInput.value.trim();
+    saveBtn.disabled =
+      !playfieldInput.value.trim() ||
+      !poiInput.value.trim() ||
+      (showTraderField && !selectedTraderDevName);
   };
   playfieldInput.addEventListener('input', validate);
   poiInput.addEventListener('input', validate);
@@ -267,11 +429,12 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
     const restockRaw = restockInput.value.trim();
     // When editing: preserve the original id and lastVisitedAt.
     // Preserve existing keyItems when the picker was not shown (no traderItems).
-    const hasKeyPicker = traderItems.length > 0;
+    const hasKeyPicker = keyPickerActive;
     try {
       await onSave(/** @type {TraderLocation} */ ({
         ...(isEditing ? existingLoc : {}),
         id:             isEditing ? existingLoc.id : crypto.randomUUID(),
+        ...(showTraderField ? { traderName: selectedTraderDevName } : {}),
         playfield:      playfieldInput.value.trim(),
         poi:            poiInput.value.trim(),
         restockMinutes: restockRaw ? Math.max(1, Math.round(Number(restockRaw))) : null,
@@ -288,5 +451,10 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
     }
   });
 
-  playfieldInput.focus();
+  // Focus the first relevant field
+  if (showTraderField) {
+    container.querySelector('[name="loc-trader"]')?.focus();
+  } else {
+    playfieldInput.focus();
+  }
 }

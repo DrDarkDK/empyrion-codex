@@ -16,6 +16,7 @@ import { buildComparison } from './ui/CompareBuilder.js';
 import { getCategoryIcon } from './ui/categoryIcons.js';
 import { escapeHtml, parseQtyRange, estimatePriceRange } from './ui/renderUtils.js';
 import { buildLocationsRoutesJson, buildLocationsRoutesCsv } from './ui/exportCodex.js';
+import { buildLocationForm } from './ui/buildLocationForm.js';
 import * as db from './db.js';
 import {
   getTraderLocations,
@@ -131,6 +132,7 @@ function navigateTo(sectionId) {
     'section-settings':  'settings',
   };
   trackPageView(_vpMap[sectionId] ?? sectionId.replace('section-', ''));
+  if (_hashReady) history.replaceState(null, '', `#${_buildPageHash()}`);
 }
 
 /**
@@ -419,6 +421,7 @@ async function renderLocationsPage() {
         ].filter((item, idx, arr) => arr.findIndex(x => x.devName === item.devName) === idx);
       },
       getTraderValue: computeTraderValue,
+      onAddLocation: () => showAddLocationForm(),
       onEdit: async (entry) => {
         await updateTraderLocation(entry);
         await refreshLocationCounts();
@@ -462,6 +465,58 @@ async function renderLocationsPage() {
     renderLocationsPage();
   }, 60_000);
 }
+
+/**
+ * Shows the "Add Location" form inline in the locations page container.
+ * Stops the auto-refresh timer while the form is open (to avoid stomping unsaved input).
+ */
+function showAddLocationForm() {
+  const container = document.getElementById('locations-page-container');
+  if (!container) return;
+
+  if (locationsRefreshTimer) { clearInterval(locationsRefreshTimer); locationsRefreshTimer = null; }
+
+  const scenarioName = getActiveScenarioName();
+
+  // Build the traders list for autocomplete
+  const allTraders = (rawTradersCfg ?? []).map(t => ({
+    name:        t.name,
+    displayName: resolveDisplayName(t.name) || t.name,
+  }));
+
+  container.innerHTML = '';
+  const formWrap = document.createElement('div');
+  formWrap.className = 'max-w-2xl';
+  container.appendChild(formWrap);
+
+  buildLocationForm(
+    formWrap,
+    async (entry) => {
+      await addTraderLocation({ ...entry, scenarioName });
+      await refreshLocationCounts();
+      rerenderTraders();
+      await renderLocationsPage();
+    },
+    () => renderLocationsPage(),
+    [],          // traderItems — populated dynamically when a trader is chosen
+    resolveIconUrl,
+    null,        // existingLoc — this is always a new entry
+    {
+      showTraderField:    true,
+      traders:            allTraders,
+      resolveTraderItems: (traderName) => {
+        const trader = rawTradersCfg?.find(t => t.name === traderName);
+        if (!trader) return [];
+        return [
+          ...(trader.sellingItems ?? []).map(i => ({ devName: i.devName, displayName: resolveDisplayName(i.devName) ?? i.devName })),
+          ...(trader.buyingItems  ?? []).map(i => ({ devName: i.devName, displayName: resolveDisplayName(i.devName) ?? i.devName })),
+        ].filter((item, idx, arr) => arr.findIndex(x => x.devName === item.devName) === idx);
+      },
+    },
+  );
+}
+
+document.getElementById('locations-add-btn')?.addEventListener('click', () => showAddLocationForm());
 
 /**
  * Fetches all saved routes for the active scenario and renders the Routes page.
@@ -665,6 +720,9 @@ function _populateDrawer(item) {
   const _itemHashPrefix = activeFeaturedIdx !== null ? `scenario=${activeFeaturedIdx}&` : '';
   history.replaceState(null, '', `#${_itemHashPrefix}item=${item.id ?? encodeURIComponent(item.name ?? '')}`);
 
+  // Share button is only meaningful for featured scenarios
+  drawerShare?.classList.toggle('hidden', activeFeaturedIdx === null);
+
   const template = rawTemplatesCfg?.get(item.recipeName ?? item.name) ?? null;
   itemDetailRenderer.render(item, drawerBody, {
     resolveLocalized: resolveDisplayNameHtml,
@@ -713,11 +771,7 @@ function closeDrawer() {
   mainEl.classList.remove('drawer-open');
   if (_drawerOpener && document.contains(_drawerOpener)) _drawerOpener.focus();
   _drawerOpener = null;
-  if (activeFeaturedIdx !== null) {
-    history.replaceState(null, '', `#scenario=${activeFeaturedIdx}`);
-  } else {
-    history.replaceState(null, '', location.pathname + location.search);
-  }
+  if (_hashReady) history.replaceState(null, '', `#${_buildPageHash()}`);
 }
 
 function _populateTraderDrawer(trader) {
@@ -735,6 +789,9 @@ function _populateTraderDrawer(trader) {
   // Update URL hash so this view can be bookmarked and shared
   const _traderHashPrefix = activeFeaturedIdx !== null ? `scenario=${activeFeaturedIdx}&` : '';
   history.replaceState(null, '', `#${_traderHashPrefix}trader=${encodeURIComponent(trader.name ?? '')}`);
+
+  // Share button is only meaningful for featured scenarios
+  drawerShare?.classList.toggle('hidden', activeFeaturedIdx === null);
 
   traderDetailRenderer.render(normalizeTraderTokens(trader), drawerBody, {
     resolveLocalized: resolveDisplayNameHtml,
@@ -853,6 +910,32 @@ function _clipboardFallback(text) {
   ta.remove();
 }
 
+// ── Page share buttons ────────────────────────────────────────────────────────
+// Delegated handler for all [data-page-share] buttons across every section header.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-page-share]');
+  if (!btn) return;
+  const url = location.href;
+  const icon  = btn.querySelector('[data-share-icon]');
+  const label = btn.querySelector('[data-share-label]');
+  const confirm = () => {
+    btn.classList.add('text-emerald-400');
+    icon?.classList.add('hidden');
+    label?.classList.remove('hidden');
+    setTimeout(() => {
+      btn.classList.remove('text-emerald-400');
+      icon?.classList.remove('hidden');
+      label?.classList.add('hidden');
+    }, 1500);
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).then(confirm).catch(() => { _clipboardFallback(url); confirm(); });
+  } else {
+    _clipboardFallback(url);
+    confirm();
+  }
+});
+
 drawerBack.addEventListener('click', () => {
   const fn = drawerHistory.pop();
   if (!fn) return;
@@ -934,6 +1017,16 @@ function openCompareOverlay() {
     },
   });
 
+  // Update URL hash and show share button only for featured scenarios
+  const compareShareBtn = document.getElementById('compare-share-btn');
+  if (activeFeaturedIdx !== null) {
+    const names = pinnedItems.map(i => encodeURIComponent(i.name ?? '')).join('|');
+    history.replaceState(null, '', `#scenario=${activeFeaturedIdx}&compare=${names}`);
+    compareShareBtn?.classList.remove('hidden');
+  } else {
+    compareShareBtn?.classList.add('hidden');
+  }
+
   compareOverlayEl.classList.remove('hidden');
   compareOverlayClose.focus();
 }
@@ -942,6 +1035,7 @@ function openCompareOverlay() {
 function closeCompareOverlay() {
   compareOverlayEl.classList.add('hidden');
   _compareResult = null;
+  if (_hashReady) history.replaceState(null, '', `#${_buildPageHash()}`);
 }
 
 // Wire compare bar buttons
@@ -950,6 +1044,30 @@ compareBarClearBtn?.addEventListener('click', () => compareState.clear());
 
 // Wire compare overlay close button
 compareOverlayClose?.addEventListener('click', closeCompareOverlay);
+
+// Wire compare share button
+document.getElementById('compare-share-btn')?.addEventListener('click', () => {
+  const url = location.href;
+  const confirm = () => {
+    const icon  = document.getElementById('compare-share-icon');
+    const label = document.getElementById('compare-share-label');
+    const btn   = document.getElementById('compare-share-btn');
+    btn?.classList.add('text-emerald-400');
+    icon?.classList.add('hidden');
+    label?.classList.remove('hidden');
+    setTimeout(() => {
+      btn?.classList.remove('text-emerald-400');
+      icon?.classList.remove('hidden');
+      label?.classList.add('hidden');
+    }, 1500);
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).then(confirm).catch(() => { _clipboardFallback(url); confirm(); });
+  } else {
+    _clipboardFallback(url);
+    confirm();
+  }
+});
 
 // Wire diff-only toggle
 compareDiffOnly?.addEventListener('change', () => {
@@ -1009,6 +1127,28 @@ function _parseHashParams(hashStr = location.hash) {
 }
 
 /**
+ * Builds the canonical URL hash string for the current page/scenario state.
+ * Used so every navigation keeps the URL shareable.
+ * @returns {string}  e.g. "scenario=2&page=weapons-matrix"
+ */
+function _buildPageHash() {
+  const scenarioPart = activeFeaturedIdx !== null ? `scenario=${activeFeaturedIdx}&` : '';
+  const _pageMap = {
+    'section-items':     'items',
+    'section-weapons':   weaponsView === 'lookup' ? 'weapons-lookup' : 'weapons-matrix',
+    'section-trading':   tradingView === 'opportunities' ? 'trading-opportunities' : 'trading',
+    'section-locations': 'locations',
+    'section-routes':    'routes',
+    'section-scenarios': 'scenarios',
+    'section-about':     'about',
+    'section-changelog': 'changelog',
+    'section-settings':  'settings',
+  };
+  const page = _pageMap[currentSectionId] ?? currentSectionId.replace('section-', '');
+  return `${scenarioPart}page=${page}`;
+}
+
+/**
  * Reads a URL hash produced by _populateDrawer or _populateTraderDrawer and opens
  * the matching drawer. Call after data is fully loaded.
  * The 'scenario' key is intentionally ignored here — featured scenario loading is
@@ -1028,6 +1168,34 @@ function _tryRestoreFromHash(hashStr = location.hash) {
   } else if (params.trader) {
     const trader = rawTradersCfg?.find(t => t.name === params.trader);
     if (trader) { navigateTo('section-trading'); openTraderDrawer(trader); }
+  } else if (params.compare) {
+    const names = params.compare.split('|').filter(Boolean);
+    const items = names
+      .map(n => lastItemResults?.find(i => i.name === n) ?? rawBlocksCfg?.find(b => b.name === n))
+      .filter(Boolean);
+    if (items.length >= 2) {
+      compareState.clear();
+      items.forEach(item => compareState.add(item));
+      navigateTo('section-items');
+      openCompareOverlay();
+    }
+  } else if (params.page) {
+    const _pageRestoreMap = {
+      'items':                 { section: 'section-items' },
+      'weapons':               { section: 'section-weapons' },
+      'weapons-matrix':        { section: 'section-weapons', action: () => { weaponsView = 'matrix'; } },
+      'weapons-lookup':        { section: 'section-weapons', action: () => { weaponsView = 'lookup'; } },
+      'trading':               { section: 'section-trading' },
+      'trading-opportunities': { section: 'section-trading', action: () => { tradingView = 'opportunities'; } },
+      'locations':             { section: 'section-locations' },
+      'routes':                { section: 'section-routes' },
+      'scenarios':             { section: 'section-scenarios' },
+      'about':                 { section: 'section-about' },
+      'changelog':             { section: 'section-changelog' },
+      'settings':              { section: 'section-settings' },
+    };
+    const entry = _pageRestoreMap[params.page];
+    if (entry) { entry.action?.(); navigateTo(entry.section); }
   }
 }
 
@@ -1815,6 +1983,7 @@ document.getElementById('scenario-input').addEventListener('change', async (e) =
   const files = Array.from(e.target.files);
   if (!files.length) return;
   activeFeaturedIdx = null;
+  _updateFeaturedButtons();
 
   // Save hash now — file loads trigger closeDrawer which would clear it
   const pendingHash = location.hash;
@@ -2145,6 +2314,7 @@ document.getElementById('empdb-input')?.addEventListener('change', async (e) => 
   activeFeaturedIdx   = null;
   activeManifestEntry = null;
   weaponsPageRenderer.setConfig(null); // reset to global defaults for non-featured scenarios
+  _updateFeaturedButtons();
   try {
     const data = JSON.parse(await file.text());
     await applyEmpdbData(data);
@@ -2353,6 +2523,9 @@ let activeFeaturedIdx      = null;
 let activeManifestEntry    = null;  // set when a custom import matches a manifest entry
 let activeScenarioName     = null;  // last scenario name from applyEmpdbData, for re-matching after manifest loads
 let activeWeaponsSupported = true;
+// Suppresses history.replaceState in navigateTo until startup is fully done,
+// so the initial URL hash is never clobbered before it has been read.
+let _hashReady             = false;
 
 const FEATURED_PLACEHOLDER_SVG = `<svg xmlns='http://www.w3.org/2000/svg' class='w-10 h-10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='12' cy='12' r='10'/><line x1='2' y1='12' x2='22' y2='12'/><path d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'/></svg>`;
 
@@ -2497,6 +2670,9 @@ document.getElementById('featured-scenarios-list')?.addEventListener('click', as
   }
 });
 
+// Capture the URL hash at page-load time before any navigation call can
+// clobber it via history.replaceState. Both the featured-scenario auto-loader
+// and the startup IIFE must read THIS value, not location.hash.
 const _featuredLoadPromise = fetchAndRenderFeaturedScenarios();
 
 // ── Scroll-to-top buttons ─────────────────────────────────────────────────────
@@ -2557,6 +2733,7 @@ document.getElementById('saved-scenarios-list')?.addEventListener('click', async
   if (loadBtn) {
     activeFeaturedIdx = null;
     weaponsPageRenderer.setConfig(null); // reset to global defaults for non-featured scenarios
+    _updateFeaturedButtons();
     try { await applyEmpdbData((await db.getScenario(Number(loadBtn.dataset.loadScenario)))?.data); }
     catch (err) { alert(`Failed to load: ${err.message}`); }
     return;
@@ -2730,6 +2907,16 @@ function navigateToDefaultPage() {
   // Re-apply manifest match now that featuredManifest is fully populated.
   // The auto-load above may have run before the manifest fetch completed.
   if (activeFeaturedIdx === null) _applyManifestMatch(activeScenarioName);
-  navigateToDefaultPage();
+  // If the URL already encodes a page/item destination, honour it; otherwise
+  // fall back to the user's configured default page.
+  const _startupHash = _parseHashParams(location.hash);
+  if (_startupHash.page || _startupHash.item || _startupHash.trader || _startupHash.compare) {
+    _tryRestoreFromHash();
+  } else {
+    navigateToDefaultPage();
+  }
+  // Startup done — enable hash writes and write the final canonical URL once.
+  _hashReady = true;
+  history.replaceState(null, '', `#${_buildPageHash()}`);
 })();
 

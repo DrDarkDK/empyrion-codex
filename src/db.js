@@ -5,13 +5,15 @@
  * Stores   : scenarios        — cached scenario payloads
  *            trader-locations — user-annotated trader locations (added in v2)
  *            routes           — planned multi-stop trading routes   (added in v3)
+ *            manual-traders   — user-authored trader data for manual-mode scenarios (added in v4)
  */
 
 const DB_NAME    = 'empyrion-codex';
-const DB_VERSION = 3;
-const STORE       = 'scenarios';
-const LOC_STORE   = 'trader-locations';
-const ROUTE_STORE = 'routes';
+const DB_VERSION = 4;
+const STORE              = 'scenarios';
+const LOC_STORE          = 'trader-locations';
+const ROUTE_STORE        = 'routes';
+const MANUAL_TRADER_STORE = 'manual-traders';
 
 /**
  * Cached connection promise — reused across all callers so only one
@@ -47,6 +49,12 @@ function openDB() {
       if (!db.objectStoreNames.contains(ROUTE_STORE)) {
         const routeStore = db.createObjectStore(ROUTE_STORE, { keyPath: 'id' });
         routeStore.createIndex('by_scenario', 'scenarioName', { unique: false });
+      }
+
+      // v4 store — user-authored traders for manual-mode scenarios
+      if (!db.objectStoreNames.contains(MANUAL_TRADER_STORE)) {
+        const mtStore = db.createObjectStore(MANUAL_TRADER_STORE, { keyPath: 'id' });
+        mtStore.createIndex('by_scenario', 'scenarioName', { unique: false });
       }
     };
     req.onsuccess = (e) => {
@@ -325,6 +333,92 @@ export async function deleteRoute(id) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const req = db.transaction(ROUTE_STORE, 'readwrite').objectStore(ROUTE_STORE).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+// ── Manual traders ────────────────────────────────────────────────────────────
+//
+// User-authored trader records for scenarios where tradersManual=true.
+// Prices are stored as observed ranges to account for restock variation
+// (high stock → lower price, low stock → higher price).
+//
+// Each entry shape:
+//   {
+//     id:           string,       — crypto.randomUUID()
+//     scenarioName: string,       — scopes to a specific scenario
+//     name:         string,       — user-entered trader display name
+//     sellingItems: [{            — items the trader sells to the player
+//       devName:  string,
+//       priceLo:  number|null,    — lowest observed sell price (full stock)
+//       priceHi:  number|null,    — highest observed sell price (low stock)
+//       qtyLo:    number|null,    — minimum stock observed
+//       qtyHi:    number|null,    — maximum stock observed
+//     }],
+//     buyingItems: [{             — items the trader buys from the player
+//       devName:  string,
+//       priceLo:  number|null,    — lowest they've paid (high supply)
+//       priceHi:  number|null,    — most they've paid (scarce supply)
+//       qtyLo:    number|null,
+//       qtyHi:    number|null,
+//     }],
+//   }
+
+/**
+ * Returns all manual trader entries for the given scenario.
+ * @param {string} scenarioName
+ * @returns {Promise<Array>}
+ */
+export async function getManualTraders(scenarioName) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const store = db.transaction(MANUAL_TRADER_STORE, 'readonly').objectStore(MANUAL_TRADER_STORE);
+    const req   = store.index('by_scenario').getAll(IDBKeyRange.only(scenarioName));
+    req.onsuccess = (e) => resolve(e.target.result ?? []);
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * Persists a new manual trader entry.
+ * Caller must supply a unique `id` (use crypto.randomUUID()).
+ * @param {object} entry
+ * @returns {Promise<void>}
+ */
+export async function addManualTrader(entry) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(MANUAL_TRADER_STORE, 'readwrite').objectStore(MANUAL_TRADER_STORE).add(entry);
+    req.onsuccess = () => resolve();
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * Overwrites an existing manual trader entry (full replace by id).
+ * Used whenever items or the trader name are edited.
+ * @param {object} entry
+ * @returns {Promise<void>}
+ */
+export async function updateManualTrader(entry) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(MANUAL_TRADER_STORE, 'readwrite').objectStore(MANUAL_TRADER_STORE).put(entry);
+    req.onsuccess = () => resolve();
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * Deletes a manual trader entry by id.
+ * @param {string} id
+ * @returns {Promise<void>}
+ */
+export async function deleteManualTrader(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(MANUAL_TRADER_STORE, 'readwrite').objectStore(MANUAL_TRADER_STORE).delete(id);
     req.onsuccess = () => resolve();
     req.onerror   = (e) => reject(e.target.error);
   });

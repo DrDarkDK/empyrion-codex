@@ -2,6 +2,7 @@ import { BaseConfigParser } from './BaseConfigParser.js';
 import { Item } from './models/Item.js';
 import {
   BLOCKED_TOP_PROPS,
+  BLOCKED_TOP_PROP_PREFIXES,
   BLOCKED_CHILD_PROPS,
   ALLOWED_CHILD_CLASSES,
   shouldDiscard,
@@ -119,7 +120,10 @@ export class ItemsConfigParser extends BaseConfigParser {
    * @returns {Item}
    */
   _transformItem(block, blockByName) {
-    const filteredProps = block.properties.filter(p => !BLOCKED_TOP_PROPS.has(p.key));
+    const filteredProps = block.properties.filter(p =>
+      !BLOCKED_TOP_PROPS.has(p.key) &&
+      !BLOCKED_TOP_PROP_PREFIXES.some(prefix => p.key.startsWith(prefix))
+    );
 
     const damageMultiplierGroup = this._resolveDamageMultiplierGroup(block, blockByName, new Set());
     const inlineDamageMultipliers = damageMultiplierGroup

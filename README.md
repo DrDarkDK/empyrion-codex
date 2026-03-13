@@ -37,6 +37,7 @@ Everything runs entirely in your browser. Your files never leave your device.
 - **Weapon damage matrix** — colour-coded matrix of every weapon vs. configurable block-material columns; tier bands (Ineffective / Normal / Effective / Very Effective) are computed empirically from the scenario's own `DamageMultiplierConfig.ecf` data
 - **Block lookup** — select any block and see every weapon ranked by its damage multiplier against that specific block type
 - **Browse traders** — see what each NPC sells and buys, with estimated price ranges and stock quantities
+- **Manual trader management** — for scenarios that don't want to publish a `TraderNPCConfig.ecf`, manually add, rename, and delete traders and their sell/buy inventories directly in the app; export and import the data as JSON for easy sharing or backup
 - **Trade opportunities** — find items that one trader sells and another buys, sorted by estimated profit
 - **Trader location tracking** — save trader locations with POI, playfield, and restock interval; live countdown timers show when a trader is ready to visit again
 - **Trade route planning** — build named routes from your saved locations, with per-stop and total profit estimates
@@ -181,6 +182,7 @@ src/
     ├── LocationsPageRenderer.js    # Renders the My Locations page
     ├── renderUtils.js              # Shared escaping, formatting, and click-handler utilities
     ├── RoutesPageRenderer.js       # Renders the Routes page and the route builder
+    ├── ManualTradersEditor.js      # Manual trader editor for scenarios without a TraderNPCConfig.ecf
     ├── TraderDetailRenderer.js     # Detail drawer for traders
     ├── TraderLocationEditor.js     # Inline location editor embedded in the trader drawer
     ├── TraderRenderer.js           # Trader cards grid with lazy rendering and virtual unload

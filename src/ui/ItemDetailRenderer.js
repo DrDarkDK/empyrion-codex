@@ -14,7 +14,7 @@ const SECTION_KEYS = new Set([
   'Mass', 'Volume', 'StackSize', 'Durability', 'MarketPrice',
   'UnlockCost', 'UnlockLevel', 'TechTreeNames', 'TechTreeParent',
   'Category', 'Material', 'HoldType', 'SlotItems', 'ChildBlocks', 'UpgradeTo', 'DowngradeTo',
-  'AmmoType', 'Accept',
+  'AmmoType', 'Accept', 'O2Accept',
 ]);
 
 
@@ -72,6 +72,7 @@ const PROP_LABELS = {
   O2Value:          'O2 Value',
   FuelValue:        'Fuel Value',
   FuelCapacity:     'Fuel Capacity',
+  O2Accept:         'O2 Types'
 };
 
 /** Per-key display value transforms applied in the properties table. */
@@ -166,6 +167,7 @@ export class ItemDetailRenderer {
       this._upgradeToSection(propMap, resolveLocalized, onSlotItemClick, resolveIconUrl),
       this._upgradeToSection(propMap, resolveLocalized, onSlotItemClick, resolveIconUrl, 'DowngradeTo', 'Downgrades To'),
       this._acceptSection(propMap, resolveLocalized, onSlotItemClick, resolveIconUrl),
+      this._o2AcceptSection(propMap, resolveLocalized, onSlotItemClick, resolveIconUrl),
       this._propertiesSection(item.properties, resolveLocalized),
       ...item.children.map(c => this._childSection(c)),
     ].filter(Boolean).join('');
@@ -516,6 +518,21 @@ export class ItemDetailRenderer {
     ).join('');
 
     return this._section('Accepts', `<div class="flex flex-wrap gap-1.5">${chips}</div>`, 'orange');
+  }
+
+  _o2AcceptSection(propMap, resolveLocalized, onSlotItemClick, resolveIconUrl) {
+    const prop = propMap.get('O2Accept');
+    if (!prop || !prop.value) return '';
+
+    const raw = String(prop.value).replace(/^"|"$/g, '').trim();
+    const devNames = raw.split(',').map(s => s.trim()).filter(Boolean);
+    if (!devNames.length) return '';
+
+    const chips = devNames.map(name =>
+      this._renderChip(name, { resolveLocalized, resolveIconUrl, interactive: !!onSlotItemClick }),
+    ).join('');
+
+    return this._section('O2 Types', `<div class="flex flex-wrap gap-1.5">${chips}</div>`, 'orange');
   }
 
   _upgradeToSection(propMap, resolveLocalized, onSlotItemClick, resolveIconUrl, propKey = 'UpgradeTo', sectionTitle = 'Upgrades To') {

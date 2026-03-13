@@ -1,6 +1,6 @@
 import { BaseConfigParser } from './BaseConfigParser.js';
 import { Block } from './models/Block.js';
-import { BLOCKED_PROPS, shouldDiscard } from './parserConfig.js';
+import { BLOCKED_PROPS, BLOCKED_PROP_PREFIXES, shouldDiscard } from './parserConfig.js';
 
 /**
  * Parses BlocksConfig.ecf into an array of {@link Block} objects.
@@ -30,7 +30,10 @@ export class BlocksConfigParser extends BaseConfigParser {
       : [];
 
     const showUserVal    = block.getPropertyValue('ShowUser');
-    const filteredProps  = block.properties.filter(p => !BLOCKED_PROPS.has(p.key));
+    const filteredProps  = block.properties.filter(p =>
+      !BLOCKED_PROPS.has(p.key) &&
+      !BLOCKED_PROP_PREFIXES.some(prefix => p.key.startsWith(prefix))
+    );
 
     // RepairToTemplate defaults to true when the property is absent entirely
     if (!filteredProps.some(p => p.key === 'RepairToTemplate')) {

@@ -10,6 +10,7 @@ import { TraderLocationEditor } from './ui/TraderLocationEditor.js';
 import { LocationsPageRenderer } from './ui/LocationsPageRenderer.js';
 import { RoutesPageRenderer } from './ui/RoutesPageRenderer.js';
 import { WeaponsPageRenderer } from './ui/WeaponsPageRenderer.js';
+import { ManualTradersEditor } from './ui/ManualTradersEditor.js';
 import { CompareState } from './ui/CompareState.js';
 import { CompareRenderer } from './ui/CompareRenderer.js';
 import { buildComparison } from './ui/CompareBuilder.js';
@@ -31,6 +32,47 @@ import {
   updateRoute,
   deleteRoute,
 } from './db.js';
+
+const APP_VERSION_URL = 'version.json';
+const APP_VERSION_STORAGE_KEY = 'empcodex.appVersion';
+const APP_VERSION_RELOAD_GUARD_KEY = 'empcodex.appVersionReloaded';
+
+async function enforceFreshAssetsOnVersionChange() {
+  try {
+    const versionUrl = new URL(APP_VERSION_URL, window.location.href);
+    versionUrl.searchParams.set('_', Date.now().toString());
+
+    const res = await fetch(versionUrl.toString(), { cache: 'no-store' });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const latestVersion = typeof data?.version === 'string' ? data.version.trim() : '';
+    if (!latestVersion) return;
+
+    const currentVersion = localStorage.getItem(APP_VERSION_STORAGE_KEY);
+    if (!currentVersion) {
+      localStorage.setItem(APP_VERSION_STORAGE_KEY, latestVersion);
+      return;
+    }
+    if (currentVersion === latestVersion) return;
+
+    const alreadyReloadedFor = sessionStorage.getItem(APP_VERSION_RELOAD_GUARD_KEY);
+    localStorage.setItem(APP_VERSION_STORAGE_KEY, latestVersion);
+    if (alreadyReloadedFor === latestVersion) return;
+    sessionStorage.setItem(APP_VERSION_RELOAD_GUARD_KEY, latestVersion);
+
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+
+    window.location.reload();
+  } catch {
+    // Best-effort only — app should continue normally if version check fails.
+  }
+}
+
+void enforceFreshAssetsOnVersionChange();
 
 const weaponsPageRenderer = new WeaponsPageRenderer();
 
@@ -79,6 +121,7 @@ function navigateTo(sectionId) {
       itemListRenderer.teardown(itemsListContainer);
     } else if (currentSectionId === 'section-trading') {
       traderRenderer.teardown(tradersListContainer);
+      manualTradersEditor.teardown(tradersListContainer);
       const oppsEl = document.getElementById('opportunities-container');
       if (oppsEl) oppsEl.innerHTML = '';
     }
@@ -174,7 +217,7 @@ function syncWeaponsSubnav() {
 
 /** Enables/disables nav buttons that require loaded data. */
 function updateNavState() {
-  const hasData = !!(lastItemResults?.length || rawTradersCfg?.length);
+  const hasData = !!(lastItemResults?.length || rawTradersCfg?.length || activeManifestEntry?.tradersManual);
   navButtons.forEach(btn => {
     if (btn.dataset.section === 'items' || btn.dataset.section === 'trading' || btn.dataset.section === 'weapons') {
       btn.disabled = !hasData;
@@ -299,7 +342,7 @@ function getActiveScenarioName() {
  */
 async function refreshLocationCounts() {
   const scenarioName = getActiveScenarioName();
-  if (!scenarioName || !rawTradersCfg?.length) {
+  if (!scenarioName) {
     locationCountMap = new Map();
     return;
   }
@@ -308,6 +351,80 @@ async function refreshLocationCounts() {
   } catch (err) {
     console.warn('[locations] Failed to fetch location counts:', err);
   }
+}
+
+/**
+ * Maps a manual-traders db item entry into a TraderItem-shaped object compatible
+ * with all existing renderer and opportunities logic.
+ * @param {{ devName: string, priceLo: number|null, priceHi: number|null, qtyLo: number|null, qtyHi: number|null }} item
+ * @param {boolean} isSelling
+ */
+function _mapManualItemToTraderItem(item, isSelling) {
+  const fmt = (lo, hi) => {
+    if (lo == null && hi == null) return null;
+    const a = lo ?? hi, b = hi ?? lo;
+    return a === b ? String(a) : `${a}-${b}`;
+  };
+  const priceStr = fmt(item.priceLo, item.priceHi);
+  const qtyStr   = fmt(item.qtyLo,   item.qtyHi);
+  return {
+    devName:      item.devName,
+    isSelling:    isSelling,
+    isBuying:    !isSelling,
+    sellQtyRange: isSelling ? qtyStr   : null,
+    sellMfRange:  isSelling ? priceStr : null,
+    buyQtyRange: !isSelling ? qtyStr   : null,
+    buyMfRange:  !isSelling ? priceStr : null,
+  };
+}
+
+/**
+ * Maps a manual-traders IndexedDB entry into a TraderNPC-shaped plain object
+ * so it is consumed by all existing rendering and opportunities logic unchanged.
+ * @param {object} entry
+ */
+function _mapManualEntryToTraderNpc(entry) {
+  return {
+    name:         entry.name,
+    sellingText:  null,
+    sellingGoods: [],
+    discount:     null,
+    sellingItems: (entry.sellingItems ?? []).map(i => _mapManualItemToTraderItem(i, true)),
+    buyingItems:  (entry.buyingItems  ?? []).map(i => _mapManualItemToTraderItem(i, false)),
+    properties:   [],
+    children:     [],
+  };
+}
+
+/**
+ * Loads manual traders from IndexedDB for the active scenario and stores them
+ * in `manualTradersCfg` as TraderNPC-shaped objects.
+ * A no-op when the active scenario is not in manual mode.
+ * @returns {Promise<void>}
+ */
+async function refreshManualTraders() {
+  if (!activeManifestEntry?.tradersManual) return;
+  const scenarioName = getActiveScenarioName();
+  if (!scenarioName) { manualTradersCfg = []; return; }
+  try {
+    const entries = await db.getManualTraders(scenarioName);
+    rawManualTraderDbEntries = entries;
+    manualTradersCfg = entries.map(_mapManualEntryToTraderNpc);
+  } catch (err) {
+    console.warn('[manual-traders] Failed to load:', err);
+    rawManualTraderDbEntries = [];
+    manualTradersCfg = [];
+  }
+}
+
+/**
+ * Returns the active trader data for the current scenario:
+ * - Manual mode: `manualTradersCfg` (user-authored, from IndexedDB)
+ * - Normal mode: `rawTradersCfg`    (parsed from TraderNPCConfig.ecf)
+ * @returns {Array|null}
+ */
+function getActiveTradersCfg() {
+  return activeManifestEntry?.tradersManual ? (manualTradersCfg ?? []) : rawTradersCfg;
 }
 
 /**
@@ -323,7 +440,7 @@ async function refreshLocationCounts() {
  * @returns {{ sell: {lo,hi,qtyLo,qtyHi}|null, buy: {lo,hi,qtyLo,qtyHi}|null }|null}
  */
 function computeTraderValue(loc) {
-  const trader = rawTradersCfg?.find(t => t.name === loc.traderName);
+  const trader = getActiveTradersCfg()?.find(t => t.name === loc.traderName);
   if (!trader) return null;
 
   const sellItems = (loc.keyItems ?? []).filter(i => i.intent === 'sell');
@@ -408,12 +525,12 @@ async function renderLocationsPage() {
         if (target) openDrawer(target);
       },
       onOpenTrader: (traderName) => {
-        const trader = rawTradersCfg?.find(t => t.name === traderName);
+        const trader = getActiveTradersCfg()?.find(t => t.name === traderName);
         if (!trader) return;
         openTraderDrawer(trader);
       },
       resolveTraderItems: (traderName) => {
-        const trader = rawTradersCfg?.find(t => t.name === traderName);
+        const trader = getActiveTradersCfg()?.find(t => t.name === traderName);
         if (!trader) return [];
         return [
           ...(trader.sellingItems ?? []).map(i => ({ devName: i.devName, displayName: resolveDisplayName(i.devName) ?? i.devName, source: 'sells' })),
@@ -479,7 +596,7 @@ function showAddLocationForm() {
   const scenarioName = getActiveScenarioName();
 
   // Build the traders list for autocomplete
-  const allTraders = (rawTradersCfg ?? []).map(t => ({
+  const allTraders = (getActiveTradersCfg() ?? []).map(t => ({
     name:        t.name,
     displayName: resolveDisplayName(t.name) || t.name,
   }));
@@ -505,7 +622,7 @@ function showAddLocationForm() {
       showTraderField:    true,
       traders:            allTraders,
       resolveTraderItems: (traderName) => {
-        const trader = rawTradersCfg?.find(t => t.name === traderName);
+        const trader = getActiveTradersCfg()?.find(t => t.name === traderName);
         if (!trader) return [];
         return [
           ...(trader.sellingItems ?? []).map(i => ({ devName: i.devName, displayName: resolveDisplayName(i.devName) ?? i.devName })),
@@ -562,13 +679,14 @@ async function renderRoutesPage() {
       scenarioName,
       getTraderValue: computeTraderValue,
       resolveIconUrl,
+      onNew: () => showRouteBuilder(container, scenarioName, null),
       onEdit: (route) => showRouteBuilder(container, scenarioName, route),
       onDelete: async (id) => {
         await deleteRoute(id);
         await renderRoutesPage();
       },
       onTraderClick: (traderName) => {
-        const trader = rawTradersCfg?.find(t => t.name === traderName);
+        const trader = getActiveTradersCfg()?.find(t => t.name === traderName);
         if (trader) openTraderDrawer(trader);
       },
       onItemClick: (devName) => {
@@ -612,7 +730,7 @@ async function showRouteBuilder(container, scenarioName, routeToEdit) {
     },
     onCancel: () => renderRoutesPage(),
     onTraderClick: (traderName) => {
-      const trader = rawTradersCfg?.find(t => t.name === traderName);
+      const trader = getActiveTradersCfg()?.find(t => t.name === traderName);
       if (trader) openTraderDrawer(trader);
     },
     onItemClick: (devName) => {
@@ -739,9 +857,9 @@ function _populateDrawer(item) {
     resolveIconUrl,
     template,
     templatesCfg: rawTemplatesCfg,
-    tradersCfg: rawTradersCfg,
+    tradersCfg: getActiveTradersCfg(),
     onTraderClick: (traderName) => {
-      const trader = rawTradersCfg?.find(t => t.name === traderName);
+      const trader = getActiveTradersCfg()?.find(t => t.name === traderName);
       if (trader) {
         drawerHistory.push(() => _populateDrawer(item));
         _populateTraderDrawer(trader);
@@ -989,7 +1107,7 @@ function openCompareOverlay() {
 
   _compareResult = buildComparison(pinnedItems, {
     templatesCfg:   rawTemplatesCfg,
-    tradersCfg:     rawTradersCfg,
+    tradersCfg:     getActiveTradersCfg(),
     getMarketPrice: getMarketPriceFor,
   });
 
@@ -1166,7 +1284,7 @@ function _tryRestoreFromHash(hashStr = location.hash) {
       : (lastItemResults?.find(i => i.name === value) ?? rawBlocksCfg?.find(b => b.name === value));
     if (item) { navigateTo('section-items'); openDrawer(item); }
   } else if (params.trader) {
-    const trader = rawTradersCfg?.find(t => t.name === params.trader);
+    const trader = getActiveTradersCfg()?.find(t => t.name === params.trader);
     if (trader) { navigateTo('section-trading'); openTraderDrawer(trader); }
   } else if (params.compare) {
     const names = params.compare.split('|').filter(Boolean);
@@ -1205,6 +1323,7 @@ const itemListRenderer   = new ItemListRenderer();
 // ── Trading renderer ──────────────────────────────────────────────
 const tradersListContainer = document.getElementById('traders-list-container');
 const traderRenderer = new TraderRenderer();
+const manualTradersEditor = new ManualTradersEditor();
 /** Last parsed items — kept so the grid can be re-rendered when localization loads. */
 let lastItemResults = null;
 /** Raw results from ItemsConfig.ecf and BlocksConfig.ecf — merged into lastItemResults. */
@@ -1214,6 +1333,10 @@ let rawBlocksCfg    = null;
 let rawTemplatesCfg = null;
 /** TraderNPC[] from TraderNPCConfig.ecf. */
 let rawTradersCfg   = null;
+/** ManualTrader[] mapped from IndexedDB — populated in manual-mode scenarios. */
+let manualTradersCfg = null;
+/** Raw DB rows for manual traders — used by ManualTradersEditor to read price/qty ranges. */
+let rawManualTraderDbEntries = [];
 /** Token[] from TokenConfig.ecf. */
 let rawTokensCfg    = null;
 /** Material[] from MaterialConfig.ecf. */
@@ -1514,7 +1637,7 @@ document.getElementById('weapons-search')?.addEventListener('input', (e) => {
 
 /** Re-renders the traders grid applying the current trading search filter. */
 function rerenderTraders() {
-  if (!rawTradersCfg) return;
+  if (!rawTradersCfg && !activeManifestEntry?.tradersManual) return;
   const tradersEl = document.getElementById('traders-list-container');
   const oppsEl    = document.getElementById('opportunities-container');
   const heading   = document.getElementById('trading-heading');
@@ -1528,9 +1651,88 @@ function rerenderTraders() {
     return;
   }
 
+  // Manual mode — delegate entirely to ManualTradersEditor
+  if (activeManifestEntry?.tradersManual) {
+    manualTradersEditor.render(tradersListContainer, {
+      traders:           getActiveTradersCfg() ?? [],
+      rawDbEntries:      rawManualTraderDbEntries,
+      itemSuggestions:   lastItemResults ?? [],
+      resolveDisplayName,
+      resolveIconUrl,
+      onTraderClick: (traderName) => {
+        const trader = getActiveTradersCfg()?.find(t => t.name === traderName);
+        if (trader) openTraderDrawer(trader);
+      },
+      onImport: async (traderEntries) => {
+        const scenarioName = getActiveScenarioName();
+        if (!scenarioName) return;
+        for (const entry of rawManualTraderDbEntries) {
+          await db.deleteManualTrader(entry.id);
+        }
+        for (const t of traderEntries) {
+          if (!t.name) continue;
+          await db.addManualTrader({
+            id: crypto.randomUUID(),
+            scenarioName,
+            name: t.name,
+            sellingItems: t.sellingItems ?? [],
+            buyingItems:  t.buyingItems  ?? [],
+          });
+        }
+        await refreshManualTraders();
+        rerenderTraders();
+      },
+      onAddTrader: async (name) => {
+        await db.addManualTrader({ id: crypto.randomUUID(), scenarioName: getActiveScenarioName(), name, sellingItems: [], buyingItems: [] });
+        await refreshManualTraders();
+        rerenderTraders();
+      },
+      onRenameTrader: async (id, newName) => {
+        const entry = rawManualTraderDbEntries.find(e => e.id === id);
+        if (!entry) return;
+        await db.updateManualTrader({ ...entry, name: newName });
+        await refreshManualTraders();
+        rerenderTraders();
+      },
+      onDeleteTrader: async (id) => {
+        await db.deleteManualTrader(id);
+        await refreshManualTraders();
+        rerenderTraders();
+      },
+      onAddItem: async (id, direction, data) => {
+        const entry = rawManualTraderDbEntries.find(e => e.id === id);
+        if (!entry) return;
+        const key = direction === 'sell' ? 'sellingItems' : 'buyingItems';
+        await db.updateManualTrader({ ...entry, [key]: [...(entry[key] ?? []), data] });
+        await refreshManualTraders();
+        rerenderTraders();
+      },
+      onUpdateItem: async (id, direction, idx, data) => {
+        const entry = rawManualTraderDbEntries.find(e => e.id === id);
+        if (!entry) return;
+        const key = direction === 'sell' ? 'sellingItems' : 'buyingItems';
+        const arr = [...(entry[key] ?? [])];
+        arr[idx] = data;
+        await db.updateManualTrader({ ...entry, [key]: arr });
+        await refreshManualTraders();
+        rerenderTraders();
+      },
+      onDeleteItem: async (id, direction, idx) => {
+        const entry = rawManualTraderDbEntries.find(e => e.id === id);
+        if (!entry) return;
+        const key = direction === 'sell' ? 'sellingItems' : 'buyingItems';
+        const arr = (entry[key] ?? []).filter((_, i) => i !== idx);
+        await db.updateManualTrader({ ...entry, [key]: arr });
+        await refreshManualTraders();
+        rerenderTraders();
+      },
+    });
+    return;
+  }
+
   // Traders view
   // Always exclude traders that have no items at all
-  const baseTraders = rawTradersCfg.filter(t => t.sellingItems.length > 0 || t.buyingItems.length > 0);
+  const baseTraders = getActiveTradersCfg().filter(t => t.sellingItems.length > 0 || t.buyingItems.length > 0);
 
   // Apply show-direction filter
   let filtered = tradingShow === 'sells' ? baseTraders.filter(t => t.sellingItems.length > 0)
@@ -1605,7 +1807,7 @@ function rerenderTraders() {
     getMarketPrice:   getMarketPriceFor,
     tradingShow,
     onTraderClick: (traderName) => {
-      const trader = rawTradersCfg?.find(t => t.name === traderName);
+      const trader = getActiveTradersCfg()?.find(t => t.name === traderName);
       if (trader) openTraderDrawer(trader);
     },
     itemSearchQuery:  tradingSearch.trim().toLowerCase(),
@@ -1620,14 +1822,14 @@ function rerenderTraders() {
  * @returns {Array}
  */
 function buildOpportunities() {
-  if (!rawTradersCfg) return [];
+  if (!getActiveTradersCfg()?.length) return [];
 
   // sellMap: devName -> [{traderName, priceRange, qtyRange}]  (trader sells to you)
   // buyMap:  devName -> [{traderName, priceRange, qtyRange}]  (trader buys from you)
   const sellMap = new Map();
   const buyMap  = new Map();
 
-  for (const rawTrader of rawTradersCfg) {
+  for (const rawTrader of getActiveTradersCfg()) {
     const tName  = resolveDisplayName(rawTrader.name ?? '') || rawTrader.name || 'Unknown';
     const trader = normalizeTraderTokens(rawTrader);
     for (const item of trader.sellingItems) {
@@ -1833,7 +2035,7 @@ async function applyLocalization(file) {
     closeDrawer();
     rerenderItems();
   }
-  if (rawTradersCfg) rerenderTraders();
+  if (rawTradersCfg || activeManifestEntry?.tradersManual) rerenderTraders();
   updateExportStatus();
 }
 
@@ -2029,7 +2231,8 @@ document.getElementById('scenario-input').addEventListener('change', async (e) =
   const itemsSectionEl = document.getElementById('section-items');
   if (itemsFile)            await loadEcfIntoSection(itemsFile,  itemsSectionEl);
   if (blocksFile)           await loadEcfIntoSection(blocksFile, itemsSectionEl);
-  if (traderFile)           await loadEcfIntoSection(traderFile, document.getElementById('section-trading'));
+  if (traderFile && !activeManifestEntry?.tradersManual)
+    await loadEcfIntoSection(traderFile, document.getElementById('section-trading'));
   if (templatesFile)        await loadTemplatesFile(templatesFile);
   if (tokenFile)            await loadTokensFile(tokenFile);
   if (materialsFile)        await loadMaterialsFile(materialsFile);
@@ -2038,6 +2241,11 @@ document.getElementById('scenario-input').addEventListener('change', async (e) =
   // Auto-save to browser cache
   await persistScenario(await buildExportPayload());
   renderSavedScenarios();
+
+  if (activeManifestEntry?.tradersManual) {
+    await refreshManualTraders();
+    rerenderTraders();
+  }
 
   if (currentSectionId === 'section-weapons') rerenderWeapons();
 
@@ -2217,7 +2425,7 @@ async function buildExportPayload() {
     scenarioName:       scenarioName || null,
     items:              rawItemsCfg            ?? [],
     blocks:             rawBlocksCfg           ?? [],
-    traders:            rawTradersCfg          ?? [],
+    traders:            (activeManifestEntry?.tradersManual ? [] : rawTradersCfg) ?? [],
     tokens:             rawTokensCfg           ?? [],
     templates:          rawTemplatesCfg ? [...rawTemplatesCfg.values()] : [],
     localization:       localizationMap ? Object.fromEntries(localizationMap) : {},
@@ -2301,8 +2509,9 @@ async function applyEmpdbData(data) {
   updateExportStatus();
   closeDrawer();
   if (lastItemResults?.length)  rerenderItems();
-  if (rawTradersCfg?.length) {
+  if (rawTradersCfg?.length || activeManifestEntry?.tradersManual) {
     await refreshLocationCounts();
+    if (activeManifestEntry?.tradersManual) await refreshManualTraders();
     rerenderTraders();
   }
   _tryRestoreFromHash(pendingHash);
@@ -2656,6 +2865,7 @@ document.getElementById('featured-scenarios-list')?.addEventListener('click', as
   try {
     const data = await _fetchScenarioData(entry.file);
     activeFeaturedIdx      = Number(btn.dataset.featuredLoad);
+    activeManifestEntry    = entry;
     activeWeaponsSupported = entry.weaponsSupported !== false;
     weaponsPageRenderer.setConfig(_buildWeaponsConfig(entry));
     await applyEmpdbData(data);

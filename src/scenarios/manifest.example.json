@@ -13,6 +13,8 @@
     "_comment_optional": "All fields below are optional.",
 
     "hidden": false,
+    "tradersManual": false,
+    "weaponsSupported": false,
     "aliases": ["AltName", "AnotherAlias"],
 
     "_comment_weapons": "Per-scenario weapon matrix config. Overrides the global parserConfig.json defaults. Omit to use the defaults.",

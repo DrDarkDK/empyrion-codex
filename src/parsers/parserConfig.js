@@ -44,9 +44,11 @@ export function shouldDiscard(block) {
 }
 
 // ── Item parser config ───────────────────────────────────────────────────────
-export const BLOCKED_TOP_PROPS    = new Set(config.items.blockedTopProps);
-export const BLOCKED_CHILD_PROPS  = new Set(config.items.blockedChildProps);
-export const ALLOWED_CHILD_CLASSES = new Set(config.items.allowedChildClasses);
+export const BLOCKED_TOP_PROPS         = new Set(config.items.blockedTopProps);
+export const BLOCKED_TOP_PROP_PREFIXES = config.items.blockedTopPropPrefixes ?? [];
+export const BLOCKED_CHILD_PROPS       = new Set(config.items.blockedChildProps);
+export const ALLOWED_CHILD_CLASSES     = new Set(config.items.allowedChildClasses);
 
 // ── Block parser config ──────────────────────────────────────────────────────
-export const BLOCKED_PROPS = new Set(config.blocks.blockedProps);
+export const BLOCKED_PROPS         = new Set(config.blocks.blockedProps);
+export const BLOCKED_PROP_PREFIXES = config.blocks.blockedPropPrefixes ?? [];

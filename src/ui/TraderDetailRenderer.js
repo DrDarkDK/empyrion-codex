@@ -70,9 +70,9 @@ export class TraderDetailRenderer {
   _itemsSection(label, items, isSell, resolveLocalized, resolveIconUrl, getMarketPrice) {
     if (!items.length) return '';
 
-    const colorCls = isSell ? 'text-emerald-400' : 'text-amber-400';
-    const headerItemCls = isSell ? 'text-emerald-800' : 'text-amber-800';
-    const sectionColor  = isSell ? 'emerald' : 'amber';
+    const colorCls = isSell ? 'text-amber-800' : 'text-emerald-800';
+    const headerItemCls = isSell ? 'text-amber-800' : 'text-emerald-800';
+    const sectionColor  = isSell ? 'amber' : 'emerald';
 
     const header = `<div class="hidden sm:flex gap-3 px-3 py-2 border-b border-zinc-800/60 text-[11px] uppercase tracking-widest text-zinc-600">` +
       `<span class="flex-1 ${headerItemCls}">Item</span>` +
@@ -115,9 +115,12 @@ export class TraderDetailRenderer {
       }
 
       const inner = `${iconHtml}<span>${display}</span>`;
+      const hoverCls = isSell
+        ? 'hover:border-amber-500/50 hover:text-amber-300 hover:bg-amber-500/10'
+        : 'hover:border-emerald-500/50 hover:text-emerald-300 hover:bg-emerald-500/10';
       const chip  = `<button data-slot-item="${escapeHtml(item.devName)}" ` +
         `class="flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 ` +
-        `hover:border-blue-500/50 hover:text-blue-300 hover:bg-blue-500/10 transition-all cursor-pointer">${inner}</button>`;
+        `${hoverCls} transition-all cursor-pointer">${inner}</button>`;
 
       return `<div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 px-3 py-2 odd:bg-zinc-800/20 text-sm">` +
         `<div class="flex-1 min-w-0">${chip}</div>` +
@@ -147,9 +150,9 @@ export class TraderDetailRenderer {
           ? `${totalLo.toLocaleString()} cr`
           : `${totalLo.toLocaleString()}\u2013${totalHi.toLocaleString()} cr`;
         footerHtml =
-          `<div class="flex items-center justify-between gap-3 px-3 py-2 border-t border-zinc-700/60 bg-amber-950/20 text-xs">` +
-          `<span class="text-zinc-500 text-[10px] uppercase tracking-wide">${partial ? 'Total (partial\u2009\u2014\u2009missing market data)' : 'Total earnings'}</span>` +
-          `<span class="tabular-nums font-medium text-amber-400">${escapeHtml(totalStr)}</span>` +
+          `<div class="flex items-center justify-between gap-3 px-3 py-2 border-t border-zinc-700/60 bg-emerald-950/20 text-xs">` +
+          `<span class="text-emerald-500 text-[10px] uppercase tracking-wide">${partial ? 'Total (partial\u2009\u2014\u2009missing market data)' : 'Total earnings'}</span>` +
+          `<span class="tabular-nums font-medium text-emerald-400">${escapeHtml(totalStr)}</span>` +
           `</div>`;
       }
     }

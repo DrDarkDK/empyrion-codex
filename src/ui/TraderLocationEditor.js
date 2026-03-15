@@ -254,13 +254,13 @@ export class TraderLocationEditor {
         const intentBadge = item.intent === 'sell'
           ? `<span class="text-[8px] font-bold text-emerald-500 uppercase leading-none">S</span>`
           : item.intent === 'buy'
-          ? `<span class="text-[8px] font-bold text-sky-400 uppercase leading-none">B</span>`
+          ? `<span class="text-[8px] font-bold text-amber-400 uppercase leading-none">B</span>`
           : '';
         const inner = `${iconUrl ? `<img src="${iconUrl}" alt="" class="w-3.5 h-3.5 object-contain shrink-0" draggable="false" />` : ''}${escapeHtml(item.displayName)}${intentBadge}`;
         const baseCls = item.intent === 'sell'
           ? 'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-950/40 border border-emerald-900/50 text-emerald-400'
           : item.intent === 'buy'
-          ? 'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-sky-950/40 border border-sky-900/50 text-sky-400'
+          ? 'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-950/40 border border-amber-900/50 text-amber-400'
           : 'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-800/50 border border-zinc-700/40 text-zinc-500';
         if (onItemClick) {
           const btn = document.createElement('button');

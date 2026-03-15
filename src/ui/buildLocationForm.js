@@ -146,7 +146,7 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
       `Key Items <span class="text-zinc-500 normal-case not-italic font-normal">— optional</span>` +
       `<span class="ml-2 text-[9px] normal-case not-italic font-normal text-zinc-400 tracking-normal">` +
         `<span class="text-emerald-400">S</span> = sell &nbsp;` +
-        `<span class="text-sky-400">B</span> = buy &nbsp;` +
+        `<span class="text-amber-400">B</span> = buy &nbsp;` +
         `<span class="text-zinc-400">·</span> = note only` +
       `</span>`;
 
@@ -175,7 +175,7 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
         // Base pill style — intent colours applied below
         const intentCls = {
           sell: 'bg-emerald-950/50 border-emerald-800/60 text-emerald-300',
-          buy:  'bg-sky-950/50     border-sky-800/60     text-sky-300',
+          buy:  'bg-amber-950/50     border-amber-800/60     text-amber-300',
           null: 'bg-zinc-800/50    border-zinc-700/50    text-zinc-400',
         }[item.intent ?? 'null'];
         pill.className = `inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full border ${intentCls}`;
@@ -203,7 +203,7 @@ export function buildLocationForm(container, onSave, onCancel, traderItems = [],
           intentBtn.title = intentTitle[k];
           intentBtn.className = {
             sell: 'ml-0.5 w-3.5 h-3.5 rounded-full text-[9px] font-bold leading-none flex items-center justify-center bg-emerald-700/60 text-emerald-200 hover:bg-emerald-600/70',
-            buy:  'ml-0.5 w-3.5 h-3.5 rounded-full text-[9px] font-bold leading-none flex items-center justify-center bg-sky-700/60     text-sky-200     hover:bg-sky-600/70',
+            buy:  'ml-0.5 w-3.5 h-3.5 rounded-full text-[9px] font-bold leading-none flex items-center justify-center bg-amber-500/60     text-amber-100     hover:bg-amber-600/70',
             null: 'ml-0.5 w-3.5 h-3.5 rounded-full text-[9px] font-bold leading-none flex items-center justify-center bg-zinc-700/60    text-zinc-400    hover:bg-zinc-600/70',
           }[k];
         };

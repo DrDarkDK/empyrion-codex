@@ -91,6 +91,9 @@ export class RoutesPageRenderer {
       ? [...(routeToEdit.stops ?? [])].sort((a, b) => a.order - b.order).map(s => s.locationId)
       : [];
 
+    // Preserve route name across re-renders (when adding stops)
+    let currentRouteName = isEdit ? (routeToEdit?.name ?? '') : '';
+
     const locById   = new Map(locations.map(l => [l.id, l]));
     const locByName = locations; // for the picker drop-down
 
@@ -126,7 +129,7 @@ export class RoutesPageRenderer {
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
       nameInput.placeholder = 'e.g. Iron Run, Morning Loop…';
-      nameInput.value = routeToEdit?.name ?? '';
+      nameInput.value = currentRouteName;
       nameInput.className =
         'bg-slate-900/50 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-slate-200 ' +
         'placeholder-slate-600 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all';
@@ -213,6 +216,8 @@ export class RoutesPageRenderer {
         'hover:bg-indigo-600/60 hover:text-white transition-colors';
       addBtn.addEventListener('click', () => {
         if (!select.value) return;
+        // Capture the current route name before render() clears the form
+        currentRouteName = nameInput.value;
         stops.push(select.value);
         render();
       });
@@ -406,13 +411,13 @@ export class RoutesPageRenderer {
             const intentBadge = item.intent === 'sell'
               ? `<span class="text-[8px] font-bold text-emerald-500 uppercase leading-none">S</span>`
               : item.intent === 'buy'
-              ? `<span class="text-[8px] font-bold text-sky-400 uppercase leading-none">B</span>`
+              ? `<span class="text-[8px] font-bold text-amber-400 uppercase leading-none">B</span>`
               : '';
             const inner = `${iconUrl ? `<img src="${iconUrl}" alt="" class="w-4 h-4 object-contain shrink-0" draggable="false" />` : ''}${escapeHtml(item.displayName)}${intentBadge}`;
             const baseCls = item.intent === 'sell'
               ? 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-950/40 border border-emerald-900/50 text-emerald-300'
               : item.intent === 'buy'
-              ? 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-sky-950/40 border border-sky-900/50 text-sky-300'
+              ? 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-950/40 border border-amber-900/50 text-amber-300'
               : 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-zinc-800/50 border border-zinc-700/40 text-zinc-400';
             if (onItemClick) {
               const btn = document.createElement('button');
@@ -444,7 +449,7 @@ export class RoutesPageRenderer {
           }
           if (value.buy) {
             const b = document.createElement('span');
-            b.className = 'text-[11px] text-sky-500/70 font-medium tabular-nums';
+            b.className = 'text-[11px] text-amber-500/70 font-medium tabular-nums';
             b.textContent = `\u2212${this._fmtRange(value.buy)}`;
             amounts.appendChild(b);
           }
@@ -523,7 +528,7 @@ export class RoutesPageRenderer {
         const intentBadge = item.intent === 'sell'
           ? `<span class="text-[8px] font-bold text-emerald-500 uppercase leading-none">S</span>`
           : item.intent === 'buy'
-          ? `<span class="text-[8px] font-bold text-sky-400 uppercase leading-none">B</span>`
+          ? `<span class="text-[8px] font-bold text-amber-400 uppercase leading-none">B</span>`
           : '';
         const inner = `${iconUrl ? `<img src="${iconUrl}" alt="" class="w-4 h-4 object-contain shrink-0" draggable="false" />` : ''}${escapeHtml(item.displayName)}${intentBadge}`;
         const baseCls = item.intent === 'sell'
@@ -647,9 +652,9 @@ export class RoutesPageRenderer {
     }
     if (hasBuy) {
       const b = document.createElement('span');
-      b.className = 'text-xs text-sky-500/70 font-medium tabular-nums';
+      b.className = 'text-xs text-amber-500/70 font-medium tabular-nums';
       b.innerHTML =
-        `<span class="text-sky-400/75 font-normal mr-1.5">Buy\u00a0cost</span>` +
+        `<span class="text-amber-400/75 font-normal mr-1.5">Buy\u00a0cost</span>` +
         `\u2212${this._fmtRange({ lo: totalBuyLo, hi: totalBuyHi })}`;
       subRows.appendChild(b);
     }
@@ -687,13 +692,13 @@ export class RoutesPageRenderer {
 
       const singleLabel = document.createElement('span');
       singleLabel.className = 'text-[11px] font-semibold uppercase tracking-wider ' +
-        (isPositive ? 'text-emerald-400/80' : 'text-sky-400/75');
+        (isPositive ? 'text-emerald-400/80' : 'text-amber-400/75');
       singleLabel.textContent = isPositive ? 'Total income' : 'Total cost';
       singleRow.appendChild(singleLabel);
 
       const singleValue = document.createElement('span');
       singleValue.className = 'text-lg font-extrabold tabular-nums tracking-tight ' +
-        (isPositive ? 'text-emerald-400' : 'text-sky-400');
+        (isPositive ? 'text-emerald-400' : 'text-amber-400');
       singleValue.textContent = (isPositive ? '+' : '\u2212') + this._fmtRange({ lo: Math.abs(onlyLo), hi: Math.abs(onlyHi) });
       singleRow.appendChild(singleValue);
 

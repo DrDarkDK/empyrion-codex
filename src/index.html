@@ -674,6 +674,18 @@
         </header>
         <div id="changelog-scroll" class="flex-1 min-h-0 overflow-y-auto px-8 py-8 custom-scrollbar flex flex-col gap-5">
 
+          <!-- v1.4.1 — 2026-03-14 -->
+          <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+              <span class="text-xs font-bold text-teal-300 bg-teal-950/60 border border-teal-800/50 px-2.5 py-0.5 rounded-full">v1.4.1</span>
+              <span class="text-[11px] text-zinc-500">March 14, 2026</span>
+            </div>
+            <ul class="flex flex-col gap-1.5">
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Reversed the colors in the Trading pages. Now green equals income for you and orange/amber equals expenses. This should now be consistent across all trading pages.</span></li>
+              <li class="flex gap-2 text-[13px] text-slate-400 leading-relaxed"><span class="text-teal-500/60 shrink-0 mt-[3px]">▸</span><span>Squashed some bugs.</span></li>
+            </ul>
+          </div>
+
           <!-- v1.4.0 — 2026-03-13 -->
           <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 px-5 py-4" style="border-left-color:#14b8a6">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
@@ -931,6 +943,19 @@
                 </div>
               </div>
 
+              <!-- Weapons page size -->
+              <div class="bg-[#161920] rounded-xl border border-zinc-800/60 border-l-2 p-5 flex flex-col gap-3 mt-3" style="border-left-color:#f59e0b">
+                <div>
+                  <p class="text-sm font-semibold text-white">Weapons Size</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Overrides text size on the Weapons page.</p>
+                </div>
+                <div class="flex gap-2" id="ui-scale-weapons-btns">
+                  <button class="settings-scale-btn" data-scale="normal">Normal</button>
+                  <button class="settings-scale-btn" data-scale="lg">Large</button>
+                  <button class="settings-scale-btn" data-scale="xl">Extra Large</button>
+                </div>
+              </div>
+
             </div>
 
           </div>
@@ -949,6 +974,19 @@
         <div class="flex gap-2 justify-end mt-1">
           <button id="import-confirm-cancel" class="text-sm font-semibold px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white border border-zinc-700 hover:border-zinc-600 transition-colors">Cancel</button>
           <button id="import-confirm-ok" class="text-sm font-semibold px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white transition-colors">Import &amp; Merge</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Delete confirmation modal ── -->
+    <div id="delete-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="delete-confirm-backdrop"></div>
+      <div class="relative bg-[#161920] border border-zinc-700 rounded-2xl p-6 max-w-sm w-full flex flex-col gap-4 shadow-2xl">
+        <h3 id="delete-confirm-title" class="text-base font-bold text-white">Delete?</h3>
+        <div id="delete-confirm-body" class="text-[13px] text-slate-400 leading-relaxed flex flex-col gap-1"></div>
+        <div class="flex gap-2 justify-end mt-1">
+          <button id="delete-confirm-cancel" class="text-sm font-semibold px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white border border-zinc-700 hover:border-zinc-600 transition-colors">Cancel</button>
+          <button id="delete-confirm-ok" class="text-sm font-semibold px-4 py-2 rounded-lg bg-red-800 hover:bg-red-600 active:bg-red-700 text-white transition-colors">Delete</button>
         </div>
       </div>
     </div>

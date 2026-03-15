@@ -443,40 +443,79 @@ function computeTraderValue(loc) {
   const trader = getActiveTradersCfg()?.find(t => t.name === loc.traderName);
   if (!trader) return null;
 
-  const sellItems = (loc.keyItems ?? []).filter(i => i.intent === 'sell');
-  const buyItems  = (loc.keyItems ?? []).filter(i => i.intent === 'buy');
+  const keyItems = (loc.keyItems ?? []);
+  if (!keyItems.length) return null;
 
-  if (!sellItems.length && !buyItems.length) return null;
-
-  // sell: credits earned by selling tagged items TO the trader (trader's buyingItems pricing)
+  // sell: credits earned by selling items TO the trader (check buyingItems, fall back to sellingItems)
   let sellLo = 0, sellHi = 0, sellQtyLo = 0, sellQtyHi = 0, hasSell = false;
-  for (const ki of sellItems) {
-    const traderItem = trader.buyingItems?.find(i => i.devName === ki.devName);
-    if (!traderItem) continue;
-    const pRange = estimatePriceRange(traderItem.buyMfRange, getMarketPriceFor(ki.devName));
-    const qRange = parseQtyRange(traderItem.buyQtyRange);
-    if (pRange && qRange) {
-      sellLo    += Math.round(qRange.lo * pRange.lo);
-      sellHi    += Math.round(qRange.hi * pRange.hi);
-      sellQtyLo += qRange.lo;
-      sellQtyHi += qRange.hi;
-      hasSell = true;
-    }
-  }
-
-  // buy: credits spent buying tagged items FROM the trader (trader's sellingItems pricing)
+  
+  // buy: credits spent buying items FROM the trader (check sellingItems, fall back to buyingItems)
   let buyLo = 0, buyHi = 0, buyQtyLo = 0, buyQtyHi = 0, hasBuy = false;
-  for (const ki of buyItems) {
-    const traderItem = trader.sellingItems?.find(i => i.devName === ki.devName);
-    if (!traderItem) continue;
-    const pRange = estimatePriceRange(traderItem.sellMfRange, getMarketPriceFor(ki.devName));
-    const qRange = parseQtyRange(traderItem.sellQtyRange);
-    if (pRange && qRange) {
-      buyLo    += Math.round(qRange.lo * pRange.lo);
-      buyHi    += Math.round(qRange.hi * pRange.hi);
-      buyQtyLo += qRange.lo;
-      buyQtyHi += qRange.hi;
-      hasBuy = true;
+
+  for (const ki of keyItems) {
+    // First, try to match the intended direction
+    if (ki.intent === 'sell') {
+      // Try to sell to trader (look in trader's buyingItems)
+      let traderItem = trader.buyingItems?.find(i => i.devName === ki.devName);
+      
+      if (traderItem) {
+        // Trader will buy this item — calculate sell value
+        const pRange = estimatePriceRange(traderItem.buyMfRange, getMarketPriceFor(ki.devName));
+        const qRange = parseQtyRange(traderItem.buyQtyRange);
+        if (pRange && qRange) {
+          sellLo    += Math.round(qRange.lo * pRange.lo);
+          sellHi    += Math.round(qRange.hi * pRange.hi);
+          sellQtyLo += qRange.lo;
+          sellQtyHi += qRange.hi;
+          hasSell = true;
+        }
+      } else {
+        // Trader won't buy it — check if trader SELLS it (reversed intent)
+        traderItem = trader.sellingItems?.find(i => i.devName === ki.devName);
+        if (traderItem) {
+          // Trader sells this item — calculate buy value (reversed intent)
+          const pRange = estimatePriceRange(traderItem.sellMfRange, getMarketPriceFor(ki.devName));
+          const qRange = parseQtyRange(traderItem.sellQtyRange);
+          if (pRange && qRange) {
+            buyLo    += Math.round(qRange.lo * pRange.lo);
+            buyHi    += Math.round(qRange.hi * pRange.hi);
+            buyQtyLo += qRange.lo;
+            buyQtyHi += qRange.hi;
+            hasBuy = true;
+          }
+        }
+      }
+    } else if (ki.intent === 'buy') {
+      // Try to buy from trader (look in trader's sellingItems)
+      let traderItem = trader.sellingItems?.find(i => i.devName === ki.devName);
+      
+      if (traderItem) {
+        // Trader sells this item — calculate buy value
+        const pRange = estimatePriceRange(traderItem.sellMfRange, getMarketPriceFor(ki.devName));
+        const qRange = parseQtyRange(traderItem.sellQtyRange);
+        if (pRange && qRange) {
+          buyLo    += Math.round(qRange.lo * pRange.lo);
+          buyHi    += Math.round(qRange.hi * pRange.hi);
+          buyQtyLo += qRange.lo;
+          buyQtyHi += qRange.hi;
+          hasBuy = true;
+        }
+      } else {
+        // Trader won't sell it — check if trader BUYS it (reversed intent)
+        traderItem = trader.buyingItems?.find(i => i.devName === ki.devName);
+        if (traderItem) {
+          // Trader buys this item — calculate sell value (reversed intent)
+          const pRange = estimatePriceRange(traderItem.buyMfRange, getMarketPriceFor(ki.devName));
+          const qRange = parseQtyRange(traderItem.buyQtyRange);
+          if (pRange && qRange) {
+            sellLo    += Math.round(qRange.lo * pRange.lo);
+            sellHi    += Math.round(qRange.hi * pRange.hi);
+            sellQtyLo += qRange.lo;
+            sellQtyHi += qRange.hi;
+            hasSell = true;
+          }
+        }
+      }
     }
   }
 
@@ -1920,7 +1959,7 @@ function renderOpportunities() {
     const msg = q
       ? 'No items match your search.'
       : 'No tradeable items found. Make sure at least one trader buys and sells the same item.';
-    el.innerHTML = `<p class="text-xs text-slate-700 text-center py-20 italic select-none">${msg}</p>`;
+    el.innerHTML = `<div><p class="text-sm text-slate-500 text-center py-20 italic select-none">${msg}</p></div>`;
     return;
   }
 
@@ -2396,7 +2435,7 @@ document.getElementById('export-btn')?.addEventListener('click', async () => {
   const hasData = !!(rawItemsCfg || rawBlocksCfg || rawTradersCfg || rawTemplatesCfg || localizationMap);
   if (!hasData) return;
   const data = await buildExportPayload();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
@@ -2976,10 +3015,12 @@ function applySettings(s) {
   const scale        = s.uiScale        ?? 'normal';
   const scaleItems   = s.uiScaleItems   ?? 'normal';
   const scaleTrading = s.uiScaleTrading ?? 'normal';
+  const scaleWeapons = s.uiScaleWeapons ?? 'normal';
 
   document.documentElement.dataset.uiScale        = scale;
   document.documentElement.dataset.uiScaleItems   = scaleItems;
   document.documentElement.dataset.uiScaleTrading = scaleTrading;
+  document.documentElement.dataset.uiScaleWeapons = scaleWeapons;
 
   document.querySelectorAll('#ui-scale-btns .settings-scale-btn').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.scale === scale)
@@ -2989,6 +3030,9 @@ function applySettings(s) {
   );
   document.querySelectorAll('#ui-scale-trading-btns .settings-scale-btn').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.scale === scaleTrading)
+  );
+  document.querySelectorAll('#ui-scale-weapons-btns .settings-scale-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.scale === scaleWeapons)
   );
 
   const defaultPage = s.defaultPage ?? 'scenarios';
@@ -3037,6 +3081,15 @@ document.getElementById('ui-scale-trading-btns')?.addEventListener('click', (e) 
   if (!btn) return;
   const s = _readSettings();
   s.uiScaleTrading = btn.dataset.scale;
+  _writeSettings(s);
+  applySettings(s);
+});
+
+document.getElementById('ui-scale-weapons-btns')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.settings-scale-btn[data-scale]');
+  if (!btn) return;
+  const s = _readSettings();
+  s.uiScaleWeapons = btn.dataset.scale;
   _writeSettings(s);
   applySettings(s);
 });

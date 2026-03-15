@@ -1,4 +1,4 @@
-import { escapeHtml } from './renderUtils.js';
+import { escapeHtml, highlightSearchQuery } from './renderUtils.js';
 
 
 const PENCIL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
@@ -33,6 +33,7 @@ export class ManualTradersEditor {
    * @param {Array}    options.itemSuggestions   - lastItemResults — for autocomplete
    * @param {function(string): string} options.resolveDisplayName
    * @param {function(string): string|null} options.resolveIconUrl
+   * @param {string}                        [options.itemSearchQuery]  - Filter items by search text
    * @param {function(string): Promise<void>}   options.onAddTrader    - called with trader name
    * @param {function(string, string): Promise<void>} options.onRenameTrader - (id, newName)
    * @param {function(string): Promise<void>}   options.onDeleteTrader - called with id
@@ -48,6 +49,7 @@ export class ManualTradersEditor {
       itemSuggestions    = [],
       resolveDisplayName = s => s,
       resolveIconUrl     = () => null,
+      itemSearchQuery    = '',
       onTraderClick      = null,
       onImport           = async () => {},
       onAddTrader        = async () => {},
@@ -56,6 +58,7 @@ export class ManualTradersEditor {
       onAddItem          = async () => {},
       onUpdateItem       = async () => {},
       onDeleteItem       = async () => {},
+      getLocationCount   = null,
     } = options;
 
     containerEl.innerHTML = '';
@@ -159,9 +162,9 @@ export class ManualTradersEditor {
 
     // ── Trader cards ──────────────────────────────────────────────────────────
     if (traders.length === 0) {
-      const empty = document.createElement('p');
-      empty.className = 'text-xs text-slate-700 text-center py-20 italic select-none';
-      empty.textContent = 'No traders yet. Add one above.';
+      const empty = document.createElement('div');
+      const msg = itemSearchQuery ? 'No traders match your search.' : 'No traders yet. Add one above.';
+      empty.innerHTML = `<p class="text-sm text-slate-500 text-center py-20 italic select-none">${escapeHtml(msg)}</p>`;
       containerEl.appendChild(empty);
       return;
     }
@@ -176,16 +179,16 @@ export class ManualTradersEditor {
         id: null, name: trader.name, sellingItems: [], buyingItems: [],
       };
       grid.appendChild(this._buildCard(
-        trader, dbEntry, itemSuggestions, resolveDisplayName, resolveIconUrl,
-        onTraderClick, onRenameTrader, onDeleteTrader, onAddItem, onUpdateItem, onDeleteItem,
+        trader, dbEntry, itemSuggestions, resolveDisplayName, resolveIconUrl, itemSearchQuery,
+        onTraderClick, onRenameTrader, onDeleteTrader, onAddItem, onUpdateItem, onDeleteItem, getLocationCount
       ));
     }
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
-  _buildCard(trader, dbEntry, itemSuggestions, resolveDisplayName, resolveIconUrl,
-    onTraderClick, onRenameTrader, onDeleteTrader, onAddItem, onUpdateItem, onDeleteItem) {
+  _buildCard(trader, dbEntry, itemSuggestions, resolveDisplayName, resolveIconUrl, itemSearchQuery,
+    onTraderClick, onRenameTrader, onDeleteTrader, onAddItem, onUpdateItem, onDeleteItem, getLocationCount) {
 
     // Outer card — identical classes to TraderRenderer placeholder
     const card = document.createElement('div');
@@ -200,7 +203,7 @@ export class ManualTradersEditor {
     const nameBtn = document.createElement('button');
     nameBtn.className = 'text-sm font-bold text-white flex-1 min-w-0 break-words text-left hover:text-amber-400 transition-colors';
     nameBtn.setAttribute('data-trader-ref', trader.name ?? '');
-    nameBtn.textContent = displayName;
+    nameBtn.innerHTML = highlightSearchQuery(escapeHtml(displayName), itemSearchQuery);
     if (onTraderClick) nameBtn.addEventListener('click', () => onTraderClick(trader.name));
     headerEl.appendChild(nameBtn);
 
@@ -244,7 +247,44 @@ export class ManualTradersEditor {
 
     iconsEl.querySelector('.mt-rename').addEventListener('click', openRenameForm);
     iconsEl.querySelector('.mt-delete').addEventListener('click', () => {
-      if (window.confirm(`Delete trader "${trader.name}"?`)) onDeleteTrader(dbEntry.id);
+      const locationCount = getLocationCount ? (getLocationCount(trader.name) ?? 0) : 0;
+      
+      const modal = document.getElementById('delete-confirm-modal');
+      if (!modal) {
+        // Fallback to window.confirm if modal is missing for some reason
+        let msg = `Delete trader "${trader.name}"?`;
+        if (locationCount > 0) {
+          msg += `\n\nWarning: This will also delete ${locationCount} location${locationCount === 1 ? '' : 's'} linked to this trader.`;
+        }
+        if (window.confirm(msg)) onDeleteTrader(dbEntry.id);
+        return;
+      }
+
+      document.getElementById('delete-confirm-title').textContent = `Delete trader "${trader.name}"?`;
+      document.getElementById('delete-confirm-body').innerHTML = locationCount > 0 
+        ? `<p class="text-amber-400">Warning: This will also delete ${locationCount} location${locationCount === 1 ? '' : 's'} linked to this trader.</p><p>This action cannot be undone.</p>`
+        : `<p>This action cannot be undone.</p>`;
+
+      modal.classList.remove('hidden');
+
+      const cleanup = () => modal.classList.add('hidden');
+
+      const btnOk = document.getElementById('delete-confirm-ok');
+      const btnCancel = document.getElementById('delete-confirm-cancel');
+      const backdrop = document.getElementById('delete-confirm-backdrop');
+
+      // Clear existing listeners
+      const newBtnOk = btnOk.cloneNode(true);
+      const newBtnCancel = btnCancel.cloneNode(true);
+      btnOk.parentNode.replaceChild(newBtnOk, btnOk);
+      btnCancel.parentNode.replaceChild(newBtnCancel, btnCancel);
+
+      newBtnOk.onclick = () => {
+        cleanup();
+        onDeleteTrader(dbEntry.id);
+      };
+      newBtnCancel.onclick = cleanup;
+      backdrop.onclick = cleanup;
     });
     renameForm.querySelector('.mt-rename-save').addEventListener('click', saveRename);
     renameForm.querySelector('.mt-rename-cancel').addEventListener('click', closeRenameForm);
@@ -267,11 +307,11 @@ export class ManualTradersEditor {
     const sectionsEl = document.createElement('div');
     sectionsEl.className = 'grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-4 gap-y-3 min-w-0';
     sectionsEl.appendChild(this._buildItemsSection(
-      'sell', dbEntry, sellingItems, [], 1,
+      'sell', dbEntry, sellingItems, [], 1, itemSearchQuery,
       itemSuggestions, resolveDisplayName, resolveIconUrl, onAddItem, onUpdateItem, onDeleteItem,
     ));
     sectionsEl.appendChild(this._buildItemsSection(
-      'buy', dbEntry, buyingItems, creditVals, maxCredit,
+      'buy', dbEntry, buyingItems, creditVals, maxCredit, itemSearchQuery,
       itemSuggestions, resolveDisplayName, resolveIconUrl, onAddItem, onUpdateItem, onDeleteItem,
     ));
     card.appendChild(sectionsEl);
@@ -279,7 +319,7 @@ export class ManualTradersEditor {
     return card;
   }
 
-  _buildItemsSection(direction, dbEntry, items, creditVals, maxCredit,
+  _buildItemsSection(direction, dbEntry, items, creditVals, maxCredit, itemSearchQuery,
     itemSuggestions, resolveDisplayName, resolveIconUrl, onAddItem, onUpdateItem, onDeleteItem) {
 
     const isSell = direction === 'sell';
@@ -288,14 +328,28 @@ export class ManualTradersEditor {
 
     // Section label — exact same classes as TraderRenderer._itemSection
     const labelEl = document.createElement('p');
-    labelEl.className = `text-[10px] ${isSell ? 'text-emerald-600' : 'text-amber-600'} uppercase tracking-widest mb-1.5`;
+    labelEl.className = `text-[10px] ${isSell ? 'text-amber-600' : 'text-emerald-600'} uppercase tracking-widest mb-1.5`;
     labelEl.textContent = isSell ? 'Sells to you' : 'Buys from you';
     section.appendChild(labelEl);
 
     // Chips list — same wrapper as TraderRenderer
     const chipsEl = document.createElement('div');
     chipsEl.className = 'flex flex-col gap-0.5';
-    items.forEach((item, idx) => {
+
+    let itemsToShow = items.map((item, idx) => ({ item, idx }));
+    
+    if (itemSearchQuery) {
+      const matchingItems = itemsToShow.filter(({ item }) => {
+        const displayName = resolveDisplayName(item.devName) || item.devName || '';
+        const devName = item.devName || '';
+        return displayName.toLowerCase().includes(itemSearchQuery) || devName.toLowerCase().includes(itemSearchQuery);
+      });
+      if (matchingItems.length > 0) {
+        itemsToShow = matchingItems;
+      }
+    }
+
+    itemsToShow.forEach(({ item, idx }) => {
       chipsEl.appendChild(this._buildChip(
         item, idx, direction, dbEntry,
         creditVals[idx] ?? 0, maxCredit,
@@ -306,7 +360,7 @@ export class ManualTradersEditor {
 
     // "+ Add item" link beneath the chips
     const addBtn = document.createElement('button');
-    addBtn.className = `mt-add-item mt-1.5 flex items-center gap-1 text-[10px] ${isSell ? 'text-emerald-800 hover:text-emerald-500' : 'text-amber-800 hover:text-amber-500'} transition-colors`;
+    addBtn.className = `mt-add-item mt-1.5 flex items-center gap-1 text-[10px] ${isSell ? 'text-amber-800 hover:text-amber-500' : 'text-emerald-800 hover:text-emerald-500'} transition-colors`;
     addBtn.innerHTML = `${PLUS_SVG} Add item`;
     section.appendChild(addBtn);
 
@@ -351,14 +405,14 @@ export class ManualTradersEditor {
     // Chip colour — IDENTICAL to TraderRenderer._itemSection
     let chipCls;
     if (isSell) {
-      chipCls = 'bg-emerald-950/30 border-emerald-800/50 text-emerald-300 hover:border-emerald-600/70 hover:bg-emerald-950/60';
+      chipCls = 'bg-amber-900/50 border-amber-600/60 text-amber-100 hover:border-amber-500/80 hover:bg-amber-900/70';
     } else {
       const ratio = maxCredit > 0 ? creditVal / maxCredit : 0;
       chipCls = ratio >= 0.5
-        ? 'bg-amber-900/50 border-amber-600/60 text-amber-100 hover:border-amber-500/80 hover:bg-amber-900/70'
+        ? 'bg-emerald-950/50 border-emerald-800/70 text-emerald-300 hover:border-emerald-600/70 hover:bg-emerald-950/60'
         : ratio >= 0.15
-        ? 'bg-amber-950/30 border-amber-800/50 text-amber-300 hover:border-amber-600/70 hover:bg-amber-950/60'
-        : 'bg-amber-950/20 border-amber-900/40 text-amber-500/70 hover:border-amber-800/50 hover:bg-amber-950/40';
+        ? 'bg-emerald-950/20 border-emerald-800/50 text-emerald-500 hover:border-emerald-600/50 hover:bg-emerald-950/40'
+        : 'bg-emerald-950/10 border-emerald-800/30 text-emerald-700 hover:border-emerald-600/50 hover:bg-emerald-950/40';
     }
 
     // Optional item icon — same img element as TraderRenderer
@@ -411,7 +465,7 @@ export class ManualTradersEditor {
     const isSell = direction === 'sell';
     const form = document.createElement('div');
     form.className =
-      `mt-1 rounded-lg border ${isSell ? 'border-emerald-900/50 bg-emerald-950/20' : 'border-amber-900/50 bg-amber-950/20'} p-3 flex flex-col gap-2`;
+      `mt-1 rounded-lg border ${isSell ? 'border-amber-900/50 bg-amber-950/20' : 'border-emerald-900/50 bg-emerald-950/20'} p-3 flex flex-col gap-2`;
 
     // Item search field
     const searchWrap = this._buildItemSearchField(itemSuggestions, resolveDisplayName);
@@ -432,7 +486,7 @@ export class ManualTradersEditor {
     footer.innerHTML =
       `<button class="mt-item-cancel text-[11px] text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded">Cancel</button>` +
       `<button class="mt-item-confirm text-[11px] px-3 py-1 rounded `+
-      `${isSell ? 'bg-emerald-800/60 text-emerald-200 hover:bg-emerald-700/60' : 'bg-amber-800/60 text-amber-200 hover:bg-amber-700/60'} transition-colors">${escapeHtml(confirmLabel)}</button>`;
+      `${isSell ? 'bg-amber-800/60 text-amber-200 hover:bg-amber-700/60' : 'bg-emerald-800/60 text-emerald-200 hover:bg-emerald-700/60'} transition-colors">${escapeHtml(confirmLabel)}</button>`;
     form.appendChild(footer);
 
     footer.querySelector('.mt-item-cancel').addEventListener('click', () => {
@@ -464,25 +518,76 @@ export class ManualTradersEditor {
     const suggestEl  = wrap.querySelector('.mt-item-suggestions');
     let _cache = null;
 
+    /**
+     * Calculates a relevance score for a search query within a target string.
+     * Score = matchType (1-3) + coverage (0-1), so exact matches (3.x) > prefix (2.x) > substring (1.x).
+     * @param {string} query - Lowercase search query
+     * @param {string} target - Lowercase target string to search
+     * @returns {number|null} - Score if found, null if not found
+     */
+    const scoreItemName = (query, target) => {
+      if (!target) return null;
+      const matchPos = target.indexOf(query);
+      if (matchPos === -1) return null;
+
+      let matchType = 1; // substring match
+      if (matchPos === 0) matchType = 2; // prefix match (at start)
+      if (target === query) matchType = 3; // exact match
+
+      const coverage = query.length / target.length; // 0-1: what % of target is the query?
+      return matchType + coverage;
+    };
+
+    /**
+     * Scores an item against the search query for both localized and dev names.
+     * Returns tier (1=localized match, 2=dev-only match) and combined score.
+     */
+    const scoreItem = (item, query) => {
+      const localizedName = (resolveDisplayName(item.name) || '').toLowerCase();
+      const devName = (item.name || '').toLowerCase();
+
+      const localizedScore = scoreItemName(query, localizedName);
+      const devScore = scoreItemName(query, devName);
+
+      if (localizedScore === null && devScore === null) return null;
+
+      // Tier 1: localized name matches (shows first)
+      // Tier 2: only dev name matches (shows after all tier 1 results)
+      const tier = localizedScore !== null ? 1 : 2;
+      const score = Math.max(localizedScore ?? 0, devScore ?? 0);
+
+      return { item, score, tier };
+    };
+
     searchEl.addEventListener('input', () => {
-      const q = searchEl.value.trim().toLowerCase();
-      if (!q) { suggestEl.classList.add('hidden'); _cache = null; return; }
+      const query = searchEl.value.trim().toLowerCase();
+      if (!query) {
+        suggestEl.classList.add('hidden');
+        _cache = null;
+        return;
+      }
 
-      _cache = itemSuggestions.filter(i => {
-        const localized = (resolveDisplayName(i.name) || '').toLowerCase();
-        return localized.includes(q) || (i.name || '').toLowerCase().includes(q);
-      }).slice(0, 30);
+      // Score all items and filter matches
+      const scoredMatches = itemSuggestions
+        .map(item => scoreItem(item, query))
+        .filter((result) => result !== null);
 
-      if (!_cache.length) { suggestEl.classList.add('hidden'); return; }
+      // Sort by tier (ascending), then by score (descending)
+      scoredMatches.sort((a, b) => a.tier - b.tier || b.score - a.score);
 
-      suggestEl.innerHTML = _cache.map((i, n) => {
-        const localName = resolveDisplayName(i.name) || i.name;
-        // Show devName as a secondary hint when it differs from the localized name
-        const devHint = localName !== i.name
-          ? `<span class="text-slate-600 ml-1.5 text-[10px]">${escapeHtml(i.name)}</span>`
-          : '';
-        return `<button type="button" data-n="${n}" class="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700/60 flex items-baseline gap-1 min-w-0">` +
-          `<span class="truncate flex-1">${escapeHtml(localName)}</span>${devHint}</button>`;
+      // Extract items and limit to 30 results
+      _cache = scoredMatches.slice(0, 30).map(result => result.item);
+
+      if (!_cache.length) {
+        suggestEl.classList.add('hidden');
+        return;
+      }
+
+      // Render dropdown
+      suggestEl.innerHTML = _cache.map((item, idx) => {
+        const displayName = resolveDisplayName(item.name) || item.name;
+        return `<button type="button" data-n="${idx}" class="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700/60 flex items-baseline gap-1 min-w-0">` +
+          `<span class="truncate flex-1">${escapeHtml(displayName)}</span></button>`;
       }).join('');
       suggestEl.classList.remove('hidden');
     });
@@ -547,19 +652,19 @@ export class ManualTradersEditor {
     let devName = hiddenEl?.value?.trim();
 
     // If no devName was captured (user typed without selecting suggestion),
-    // try to match the typed text against devNames and localized names.
+    // try to match the typed text against localized names first, then dev names.
     if (!devName) {
       const typed = searchEl?.value?.trim();
       if (!typed) { searchEl?.focus(); return null; }
       const typedLc = typed.toLowerCase();
-      const byDev = itemSuggestions.find(i => (i.name ?? '').toLowerCase() === typedLc);
-      if (byDev) {
-        devName = byDev.name;
+      const byLocalized = itemSuggestions.find(i =>
+        (resolveDisplayName(i.name) ?? '').toLowerCase() === typedLc,
+      );
+      if (byLocalized) {
+        devName = byLocalized.name;
       } else {
-        const byLocalized = itemSuggestions.find(
-          i => (resolveDisplayName(i.name) ?? '').toLowerCase() === typedLc,
-        );
-        devName = byLocalized ? byLocalized.name : typed;
+        const byDev = itemSuggestions.find(i => (i.name ?? '').toLowerCase() === typedLc);
+        devName = byDev ? byDev.name : typed;
       }
     }
 

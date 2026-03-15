@@ -455,7 +455,7 @@ export class ItemDetailRenderer {
         return String(qty).replace(/-/g, '\u2013');
       })();
         const priceStr = formatPrice(price);
-        const colorCls = isSell ? 'text-emerald-400' : 'text-amber-400';
+        const colorCls = isSell ? 'text-amber-400' : 'text-emerald-400';
         const priceCls = 'text-zinc-500';
         let out = qtyStr ? `<span class="${colorCls}">${escapeHtml(qtyStr)}</span>` : '';
         if (priceStr) out += `<span class="${priceCls} ml-1">${escapeHtml(priceStr)}</span>`;
@@ -482,8 +482,8 @@ export class ItemDetailRenderer {
 
     const header = `<div class="hidden sm:flex items-center gap-3 px-3 py-2 border-b border-zinc-800/60 text-xs uppercase tracking-widest text-zinc-600">
   <span class="shrink-0 w-32">Trader</span>
-  <span class="flex-1 text-emerald-800">Sells · Stock</span>
-  <span class="flex-1 text-amber-800">Buys · Stock</span>
+  <span class="flex-1 text-amber-800">Sells · Stock</span>
+  <span class="flex-1 text-emerald-800">Buys · Stock</span>
 </div>`;
 
     const table = `<div class="divide-y divide-zinc-800/60 rounded-lg overflow-hidden border border-zinc-800/60">${header}${rows}</div>`;

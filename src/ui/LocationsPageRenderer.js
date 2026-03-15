@@ -220,10 +220,10 @@ export class LocationsPageRenderer {
 
       if (value.buy) {
         const el = document.createElement('p');
-        el.className = 'text-[11px] text-sky-600/70 font-medium';
+        el.className = 'text-[11px] text-amber-600/80 font-medium';
         el.innerHTML =
-          `<span class="text-sky-400/75 font-normal mr-1">Buy\u00a0cost</span>${fmtRange(value.buy)}` +
-          `<span class="block text-[11px] text-sky-500/70 font-normal mt-0.5">${fmtQty(value.buy)}\u00a0units</span>`;
+          `<span class="text-amber-400/80 font-normal mr-1">Buy\u00a0cost</span>${fmtRange(value.buy)}` +
+          `<span class="block text-[11px] text-amber-600/80 font-normal mt-0.5">${fmtQty(value.buy)}\u00a0units</span>`;
         el.title = 'Credits spent buying all available stock from this trader (qty \xd7 price \xd7 market price, low\u2013high)';
         valueRow.appendChild(el);
       }
@@ -247,15 +247,15 @@ export class LocationsPageRenderer {
       for (const item of loc.keyItems) {
         const iconUrl = resolveIconUrl?.(item.devName);
         const intentBadge = item.intent === 'sell'
-          ? `<span class="text-[8px] font-bold text-emerald-500 uppercase leading-none">S</span>`
+          ? `<span class="text-[8px] font-bold text-emerald-400 uppercase leading-none">S</span>`
           : item.intent === 'buy'
-          ? `<span class="text-[8px] font-bold text-sky-400 uppercase leading-none">B</span>`
+          ? `<span class="text-[8px] font-bold text-amber-400 uppercase leading-none">B</span>`
           : '';
         const inner = `${iconUrl ? `<img src="${iconUrl}" alt="" class="w-4 h-4 object-contain shrink-0" draggable="false" />` : ''}${escapeHtml(item.displayName)}${intentBadge}`;
         const baseCls = item.intent === 'sell'
           ? 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-950/40 border border-emerald-900/50 text-emerald-300'
           : item.intent === 'buy'
-          ? 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-sky-950/40 border border-sky-900/50 text-sky-300'
+          ? 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-950/40 border border-amber-900/50 text-amber-300'
           : 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-zinc-800/50 border border-zinc-700/40 text-zinc-400';
         if (onItemClick) {
           const btn = document.createElement('button');

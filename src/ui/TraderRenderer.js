@@ -80,7 +80,7 @@ export class TraderRenderer {
     }
 
     if (!traders.length) {
-      containerEl.innerHTML = '<p class="text-xs text-slate-700 text-center py-20 italic select-none">No traders loaded.</p>';
+      containerEl.innerHTML = '<div><p class="text-sm text-slate-500 text-center py-20 italic select-none">No traders loaded.</p></div>';
       return;
     }
 
@@ -275,7 +275,7 @@ export class TraderRenderer {
     if (!visibleItems.length && !itemSearchQuery.trim()) return '';
 
     const label    = isSell ? 'Sells to you' : 'Buys from you';
-    const labelCls = isSell ? 'text-emerald-600' : 'text-amber-600';
+    const labelCls = isSell ? 'text-amber-600' : 'text-emerald-600';
 
     // Pre-compute total credit values for heat-scale colouring on buy chips
     const creditValues = !isSell ? visibleItems.map(item => {
@@ -308,14 +308,14 @@ export class TraderRenderer {
       // Per-chip colour: sell chips are uniform; buy chips use a heat scale
       let chipCls;
       if (isSell) {
-        chipCls = 'bg-emerald-950/30 border-emerald-800/50 text-emerald-300 hover:border-emerald-600/70 hover:bg-emerald-950/60';
+        chipCls = 'bg-amber-900/50 border-amber-600/60 text-amber-100 hover:border-amber-500/80 hover:bg-amber-900/70';
       } else {
         const ratio = creditValues[idx] / maxCredit;
         chipCls = ratio >= 0.5
-          ? 'bg-amber-900/50 border-amber-600/60 text-amber-100 hover:border-amber-500/80 hover:bg-amber-900/70'
-          : ratio >= 0.15
-          ? 'bg-amber-950/30 border-amber-800/50 text-amber-300 hover:border-amber-600/70 hover:bg-amber-950/60'
-          : 'bg-amber-950/20 border-amber-900/40 text-amber-500/70 hover:border-amber-800/50 hover:bg-amber-950/40';
+          ? 'bg-emerald-950/50 border-emerald-800/70 text-emerald-300 hover:border-emerald-600/70 hover:bg-emerald-950/60'
+        : ratio >= 0.15
+        ? 'bg-emerald-950/20 border-emerald-800/50 text-emerald-500 hover:border-emerald-600/50 hover:bg-emerald-950/40'
+        : 'bg-emerald-950/10 border-emerald-800/30 text-emerald-700 hover:border-emerald-600/50 hover:bg-emerald-950/40';
       }
 
       let iconHtml = '';
